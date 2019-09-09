@@ -17,6 +17,7 @@ export class IntactAngular extends Intact {
     private props;
     private _blockConstructor: boolean = true;
     private _placeholder;
+    private __blocks;
 
     @ViewChild('container', {read: ViewContainerRef, static: true}) container: ViewContainerRef;
 
@@ -46,7 +47,7 @@ export class IntactAngular extends Intact {
         placeholder._realElement = dom;
         
         // for Error: ExpressionChangedAfterItHasBeenCheckedError
-        this.changeDectectorRef.detectChanges();
+        // this.changeDectectorRef.detectChanges();
     }
 
     ngAfterViewChecked() {
@@ -71,15 +72,7 @@ export class IntactAngular extends Intact {
             return h(Wrapper, {dom});
         });
 
-        const blocks = {};
-        for (let key in intactNode.blocks) {
-            const vNodes = intactNode.blocks[key].map(dom => {
-                return h(Wrapper, {dom});
-            });
-            blocks[key] = () => vNodes;
-        }
-
-        const props = {...intactNode.props, children, _blocks: blocks};
+        const props = {...intactNode.props, children, _blocks: this.__blocks};
 
         this.vNode = h(this.constructor, props);
         this.vNode.children = this;
@@ -89,8 +82,10 @@ export class IntactAngular extends Intact {
 
     _normalizeBlocks() {
         const placeholder = this._placeholder; 
+        const container = this.container;
         const intactNode: IntactNode = placeholder._intactNode;
         const blocks = (<any>this.constructor).__prop__metadata__;
+        const _blocks = this.__blocks = {};
         for (let name in blocks) {
             if (blocks[name][0].read !== TemplateRef) continue;
 
@@ -98,11 +93,23 @@ export class IntactAngular extends Intact {
             if (!ref) continue;
 
             name = name.substring(BLOCK_NAME_PREFIX.length);
-            const viewRef = ref.createEmbeddedView(null);
-            placeholder._block = name;
-            intactNode.blocks[name] = [];
-            this.container.insert(viewRef, 0);
-            placeholder._block = null;
+            _blocks[name] = function fn(__nouse__, data) {
+                if ((<any>fn)._cache) return (<any>fn)._cache;
+
+                const viewRef = ref.createEmbeddedView({$implicit: data});
+                console.log(viewRef);
+                debugger;
+                placeholder._block = name;
+                intactNode.blocks[name] = [];
+                container.insert(viewRef, 0);
+                placeholder._block = null;
+
+                const vNodes = (<any>fn)._cache = intactNode.blocks[name].map(dom => {
+                    return h(Wrapper, {dom});
+                });
+
+                return vNodes;
+            }
         }
     }
 }

@@ -5,10 +5,11 @@ import { NgModule, NO_ERRORS_SCHEMA } from '@angular/core';
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { Button } from './button';
+import { HelloComponent } from './hello/hello.component';
 
 @NgModule({
   declarations: [
-    AppComponent, Button
+    AppComponent, Button, HelloComponent
   ],
   imports: [
     // BrowserModule,

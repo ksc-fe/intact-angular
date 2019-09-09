@@ -8,4 +8,12 @@
     <ng-template #prefix>
         <b>prefix</b>
     </ng-template>
+    <ng-template let-scope #item>
+        {{ scope.name }}
+    </ng-template>
 </k-button>
+<app-hello>
+    <ng-template #scope let-scope>
+        <div>{{scope.name}}</div>
+    </ng-template>
+</app-hello>
