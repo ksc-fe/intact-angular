@@ -1,4 +1,4 @@
-import Intact from 'intact';
+import Intact from 'intact/dist/index';
 import {
     Component, ElementRef, ViewContainerRef, 
     ChangeDetectorRef, ViewChild, TemplateRef,
@@ -105,5 +105,3 @@ export class IntactAngular extends Intact {
         }
     }
 }
-
-export default IntactAngular;

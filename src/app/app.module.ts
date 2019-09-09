@@ -1,5 +1,5 @@
-// import { BrowserModule } from '@angular/platform-browser';
 import { IntactAngularBrowserModule } from '../../lib/module';
+// import { IntactAngularBrowserModule } from '../../dist/index';
 import { NgModule, NO_ERRORS_SCHEMA } from '@angular/core';
 
 import { AppRoutingModule } from './app-routing.module';

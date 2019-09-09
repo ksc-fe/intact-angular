@@ -1,5 +1,3 @@
-import Intact from 'intact';
-
 export type StringMap<T = any> = {[index: string]: T};
 
 export class IntactNode {

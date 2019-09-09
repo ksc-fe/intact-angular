@@ -1,5 +1,6 @@
 import {Component, ElementRef, ViewContainerRef, ContentChild, TemplateRef, ViewChild, ChangeDetectorRef} from '@angular/core';
 import {IntactAngular as Intact} from '../../../lib/intact-angular';
+// import Intact from '../../../dist/index';
 
 export class Button extends Intact {
     @(<any>Intact).template()
