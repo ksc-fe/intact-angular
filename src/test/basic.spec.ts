@@ -162,4 +162,35 @@ describe('Basic test', () => {
         fixture.detectChanges();
         expect(element.innerHTML).toBe('<div>begin<div>children</div><div><span>end</span><b>!</b></div></div>');
     });
+
+    it('should render scope blocks', () => {
+        const TestComponent = createIntactAngularComponent(
+            `<div>
+                <div v-for={{ self.get('data') }}>
+                    <b:template args={{scope: value}} />
+                </div>
+            </div>`,
+            `k-test`,
+            null,
+            ['template']
+        );
+
+        @Component({
+            selector: `app-root`,
+            template: `<k-test [data]="data">
+                <div>children</div> 
+                <ng-template #template let-scope="scope">
+                    <div>{{scope.name}}</div>
+                </ng-template>
+            </k-test>`
+        })
+        class AppComponent {
+            data = [{name: 'aaa'}, {name: 'bbb'}];
+        }
+
+        const fixture = getFixture<AppComponent>([AppComponent, TestComponent]);
+        const element = fixture.nativeElement;
+
+        console.log(element);
+    });
 });

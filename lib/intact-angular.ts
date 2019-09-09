@@ -5,7 +5,7 @@ import {
 } from '@angular/core';
 import {Wrapper} from './wrapper';
 import {IntactNode} from './intact-node';
-import {decorate} from './decorate';
+import {decorate, BLOCK_NAME_PREFIX} from './decorate';
 
 const {h} = Intact.Vdt.miss;
 
@@ -97,6 +97,7 @@ export class IntactAngular extends Intact {
             const ref = this[name];
             if (!ref) continue;
 
+            name = name.substring(BLOCK_NAME_PREFIX.length);
             const viewRef = ref.createEmbeddedView(null);
             placeholder._block = name;
             intactNode.blocks[name] = [];
