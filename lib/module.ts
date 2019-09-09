@@ -1,7 +1,6 @@
 import {NgModule} from '@angular/core';
 import {BrowserModule, ɵDomRendererFactory2} from '@angular/platform-browser';
-import {IntactAngularRendererFactory} from './renderer';
-import {DomRendererFactory2} from './renderer2';
+import {DomRendererFactory2} from './renderer';
 
 @NgModule({
     imports: [BrowserModule],

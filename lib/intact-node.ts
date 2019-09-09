@@ -8,7 +8,7 @@ export class IntactNode {
     private _childrenToAppend: Array<HTMLElement> = [];
 
     public props = {};
-    public children: Set<HTMLElement> = new Set();
+    public children: Array<HTMLElement> = [];
     public blocks: any = {};
 
     set parent(parent: HTMLElement | IntactNode) {
@@ -42,11 +42,6 @@ export class IntactNode {
         this._text = value;
 
         return this;
-    }
-
-    appendChild(projectedContent: HTMLElement) {
-        debugger;
-        this._childrenToAppend.push(projectedContent);
     }
 }
 

@@ -1,5 +1,6 @@
 <k-button type="primary" [disable]="disable" (click)="onClick()">
-    <span>content</span>
+    <span *ngIf="!disable">content</span>
+    <b>test</b>
     <ng-template #suffix>
         <i *ngIf="disable">suffix1</i>
         <b>suffix2</b>
@@ -8,4 +9,3 @@
         <b>prefix</b>
     </ng-template>
 </k-button>
-<router-outlet></router-outlet>

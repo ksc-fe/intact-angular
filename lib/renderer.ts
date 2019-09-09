@@ -1,133 +1,402 @@
-import {Injectable, Renderer2, RendererStyleFlags2, RendererType2} from '@angular/core';
-import {EventManager, ɵDomRendererFactory2, ɵDomSharedStylesHost} from '@angular/platform-browser';
+/**
+ * @license
+ * Copyright Google Inc. All Rights Reserved.
+ *
+ * Use of this source code is governed by an MIT-style license that can be
+ * found in the LICENSE file at https://angular.io/license
+ */
+
+import {APP_ID, Inject, Injectable, Renderer2, RendererFactory2, RendererStyleFlags2, RendererType2, ViewEncapsulation} from '@angular/core';
+import {EventManager, ɵDomSharedStylesHost as DomSharedStylesHost} from '@angular/platform-browser';
 import {IntactNode, isIntactNode} from './intact-node';
 
+export const NAMESPACE_URIS: {[ns: string]: string} = {
+    'svg': 'http://www.w3.org/2000/svg',
+    'xhtml': 'http://www.w3.org/1999/xhtml',
+    'xlink': 'http://www.w3.org/1999/xlink',
+    'xml': 'http://www.w3.org/XML/1998/namespace',
+    'xmlns': 'http://www.w3.org/2000/xmlns/',
+};
+
+const COMPONENT_REGEX = /%COMP%/g;
+export const COMPONENT_VARIABLE = '%COMP%';
+export const HOST_ATTR = `_nghost-${COMPONENT_VARIABLE}`;
+export const CONTENT_ATTR = `_ngcontent-${COMPONENT_VARIABLE}`;
+
+export function shimContentAttribute(componentShortId: string): string {
+    return CONTENT_ATTR.replace(COMPONENT_REGEX, componentShortId);
+}
+
+export function shimHostAttribute(componentShortId: string): string {
+    return HOST_ATTR.replace(COMPONENT_REGEX, componentShortId);
+}
+
+export function flattenStyles(
+    compId: string, styles: Array<any | any[]>, target: string[]
+): string[] {
+    for (let i = 0; i < styles.length; i++) {
+        let style = styles[i];
+
+        if (Array.isArray(style)) {
+            flattenStyles(compId, style, target);
+        } else {
+            style = style.replace(COMPONENT_REGEX, compId);
+            target.push(style);
+        }
+    }
+    return target;
+}
+
+function decoratePreventDefault(eventHandler: Function): Function {
+    return (event: any) => {
+        // Ivy uses `Function` as a special token that allows us to unwrap the function
+        // so that it can be invoked programmatically by `DebugNode.triggerEventHandler`.
+        if (event === Function) {
+            return eventHandler;
+        }
+
+        const allowDefaultBehavior = eventHandler(event);
+        if (allowDefaultBehavior === false) {
+            // TODO(tbosch): move preventDefault into event plugins...
+            event.preventDefault();
+            event.returnValue = false;
+        }
+
+        return undefined;
+    };
+}
+
 @Injectable()
-export class IntactAngularRendererFactory extends ɵDomRendererFactory2 {
-    private readonly defaultIntactRenderer: IntactRenderer;
+export class DomRendererFactory2 implements RendererFactory2 {
+    private rendererByCompId = new Map<string, Renderer2>();
+    private defaultRenderer: Renderer2;
 
-    public intactRootNodes: Set<IntactNode> = new Set();
-
-    constructor(eventManager: EventManager, sharedStylesHost: ɵDomSharedStylesHost) {
-        super(eventManager, sharedStylesHost, 'app-id');
-
-        this.defaultIntactRenderer = new IntactRenderer(this);
+    constructor(
+        private eventManager: EventManager, private sharedStylesHost: DomSharedStylesHost,
+        @Inject(APP_ID) private appId: string) {
+        this.defaultRenderer = new DefaultDomRenderer2(eventManager);
     }
 
     createRenderer(element: any, type: RendererType2 | null): Renderer2 {
-        if (type && type.styles && type.styles[0] === 'intact') {
-            return this.defaultIntactRenderer;
+        if (!element || !type) {
+            return this.defaultRenderer;
         }
-        return super.createRenderer(element, type);
-    }
-
-    begin() {}
-
-    end() {}
-}
-
-export interface IntactRendererData {
-    readonly addRootNode: (node: IntactNode) => void;
-}
-
-export class IntactRenderer implements Renderer2 {
-    readonly data: IntactRendererData = {
-        addRootNode: (node: IntactNode) => {
-            this.rootRenderer.intactRootNodes.add(node);
-        },
-    };
-
-    constructor(public readonly rootRenderer: IntactAngularRendererFactory) {
-        debugger; 
-    }
-
-    createElement(value: string): IntactNode {
-        debugger;
-        return new IntactNode(name);
-    }
-
-    destroy(): void {}
-
-    destroyNode(node: IntactNode): void {
-        debugger;
-    }
-
-    createComment(value: string): IntactNode {
-        return new IntactNode(); 
-    }
-
-    createText(value: string): IntactNode {
-        debugger;
-        return new IntactNode().asText(value);
-    }
-
-    appendChild(parent: HTMLElement | IntactNode, node: IntactNode): void {
-        debugger;
-        if (!isIntactNode(parent)) {
-            this.rootRenderer.intactRootNodes.add(node);
-            node.parent = parent;
+        switch (type.encapsulation) {
+            case ViewEncapsulation.Emulated: {
+                let renderer = this.rendererByCompId.get(type.id);
+                if (!renderer) {
+                    renderer = new EmulatedEncapsulationDomRenderer2(
+                        this.eventManager, this.sharedStylesHost, type, this.appId);
+                    this.rendererByCompId.set(type.id, renderer);
+                }
+                (<EmulatedEncapsulationDomRenderer2>renderer).applyToHost(element);
+                return renderer;
+            }
+            case ViewEncapsulation.Native:
+            case ViewEncapsulation.ShadowDom:
+                return new ShadowDomRenderer(this.eventManager, this.sharedStylesHost, element, type);
+            default: {
+                if (!this.rendererByCompId.has(type.id)) {
+                    const styles = flattenStyles(type.id, type.styles, []);
+                    this.sharedStylesHost.addStyles(styles);
+                    this.rendererByCompId.set(type.id, this.defaultRenderer);
+                }
+                return this.defaultRenderer;
+            }
         }
     }
 
-    insertBefore(parent: HTMLElement | IntactNode, node: IntactNode, refChild: any): void {
+    begin() { }
+    end() { }
+}
 
+class DefaultDomRenderer2 implements Renderer2 {
+    data: {[key: string]: any} = Object.create(null);
+
+    constructor(private eventManager: EventManager) { }
+
+    destroy(): void { }
+
+    destroyNode: null;
+
+    createElement(name: string, namespace?: string): any {
+        if (namespace) {
+            // In cases where Ivy (not ViewEngine) is giving us the actual namespace, the look up by key
+            // will result in undefined, so we just return the namespace here.
+            return document.createElementNS(NAMESPACE_URIS[namespace] || namespace, name);
+        } else if (name.substring(0, 2) === 'k-') {
+            const el: any = document.createComment('intact-node');
+            el._intactNode = new IntactNode(name);
+            return el;
+        }
+
+        return document.createElement(name);
     }
 
-    removeChild(parent: HTMLElement | IntactNode | void, node: IntactNode, isHostElement?: boolean): void {
+    createComment(value: string): any { return document.createComment(value); }
 
-    }
+    createText(value: string): any { return document.createTextNode(value); }
 
-    selectRootElement(selectorOrNode: string | any): any {
-
-    }
-
-    parentNode(node: IntactNode): any {
-
-    }
-
-    nextSibling(node: any): any {
-
-    }
-
-    setAttribute(node: IntactNode, name: string, value: string, namespace?: string): void {
-        node.setAttribute(name, value);
-    }
-
-    removeAttribute(node: IntactNode, name: string, namespace?: string): void {
-
-    }
-
-    addClass(node: IntactNode, name: string): void {
-        node.setProperty('className', name);
-    }
-
-    removeClass(node: IntactNode, name: string): void {
-
-    }
-
-    setStyle(node: IntactNode, style: string, value: any, flags: RendererStyleFlags2): void {
-        if (flags & RendererStyleFlags2.DashCase) {
-            node.setProperty('style', {style: value + !!(flags & RendererStyleFlags2.Important) ? ' !important' : ''});
+    appendChild(parent: any, newChild: any): void {
+        if (parent._intactNode) {
+            const children = parent._intactNode.children;
+            const lastNode = children[children.length - 1]; 
+            parent._intactNode.children.push(newChild);
+            // fix the parentNode, because it has not been appended to parentNode
+            newChild._parentNode = parent;
+            if (lastNode) {
+                lastNode._nextSibling = newChild;
+            }
         } else {
-            node.setProperty('style', {style: value});
+            parent.appendChild(newChild); 
         }
     }
 
-    removeStyle(node: IntactNode, style: string, flags: RendererStyleFlags2): void {
+    insertBefore(parent: any, newChild: any, refChild: any): void {
+        if (parent) {
+            if (parent._intactNode) {
+                const name = parent._block;
+                if (name) {
+                    // it is appending block child
+                    const blocks = parent._intactNode.blocks;
+                    blocks[name].push(newChild);
+                } else {
+                    // it is appending child
+                    if (!refChild) {
+                        this.appendChild(parent, newChild);
+                    } else {
+                        const children = parent._intactNode.children;
+                        const index = children.indexOf(refChild);
 
+                        children.splice(index, 0, newChild);
+                        // update nextSibling
+                        newChild._parentNode = parent;
+                        newChild._nextSibling = refChild;
+                        if (index > 0) {
+                            children[index - 1]._nextSibing = newChild;
+                        } 
+                    }
+                }
+            } else {
+                parent.insertBefore(newChild, refChild && (refChild._realElement || refChild));
+            }
+        }
     }
 
-    setProperty(node: IntactNode, name: string, value: any): void {
-        node.setProperty(name, value);
+    removeChild(parent: any, oldChild: any): void {
+        if (parent) {
+            if (parent._intactNode) {
+                const children = parent._intactNode.children;
+                const index = children.indexOf(oldChild); 
+                children.splice(index, 1);
+                // update nextSibling
+                if (index > 0) {
+                    children[index - 1]._nextSibling = children[index];
+                }
+            } else {
+                parent.removeChild(oldChild._realElement || oldChild);
+            }
+        }
     }
 
-    setValue(node: IntactNode, value: string): void {
-        node.setProperty('value', value);
+    selectRootElement(selectorOrNode: string | any, preserveContent?: boolean): any {
+        let el: any = typeof selectorOrNode === 'string' ? document.querySelector(selectorOrNode) :
+            selectorOrNode;
+        if (!el) {
+            throw new Error(`The selector "${selectorOrNode}" did not match any elements`);
+        }
+        if (!preserveContent) {
+            el.textContent = '';
+        }
+        return el;
     }
 
-    listen(node: IntactNode, event: string, callback: (event: any) => boolean): () => void {
-        node.setProperty(event, callback);
+    parentNode(node: any): any { 
+        return node.parentNode || node._parentNode; 
+    }
 
-        return () => null;
+    nextSibling(node: any): any { 
+        return node.nextSibling || node._nextSibling; 
+    }
+
+    setAttribute(el: any, name: string, value: string, namespace?: string): void {
+        if (namespace) {
+            name = namespace + ':' + name;
+            // TODO(benlesh): Ivy may cause issues here because it's passing around
+            // full URIs for namespaces, therefore this lookup will fail.
+            const namespaceUri = NAMESPACE_URIS[namespace];
+            if (namespaceUri) {
+                el.setAttributeNS(namespaceUri, name, value);
+            } else {
+                el.setAttribute(name, value);
+            }
+            
+        } else if (el._intactNode) {
+            el._intactNode.setAttribute(name, value);   
+        } else {
+            el.setAttribute(name, value);
+        }
+    }
+
+    removeAttribute(el: any, name: string, namespace?: string): void {
+        if (namespace) {
+            // TODO(benlesh): Ivy may cause issues here because it's passing around
+            // full URIs for namespaces, therefore this lookup will fail.
+            const namespaceUri = NAMESPACE_URIS[namespace];
+            if (namespaceUri) {
+                el.removeAttributeNS(namespaceUri, name);
+            } else {
+                // TODO(benlesh): Since ivy is passing around full URIs for namespaces
+                // this could result in properties like `http://www.w3.org/2000/svg:cx="123"`,
+                // which is wrong.
+                el.removeAttribute(`${namespace}:${name}`);
+            }
+            
+        } else if (el._intactNode) {
+            el._intactNode.removeAttribute(name);
+        } else {
+            el.removeAttribute(name);
+        }
+    }
+
+    addClass(el: any, name: string): void { 
+        if (el._intactNode) {
+            // TODO
+            el._intactNode.setProperty('className', name);
+        } else {
+            el.classList.add(name); 
+        }
+    }
+
+    removeClass(el: any, name: string): void {
+        if (el._intactNode) {
+            // TODO
+            el._intactNode.removeProperty('className');
+        } else {
+            el.classList.remove(name); 
+        }
+    }
+
+    setStyle(el: any, style: string, value: any, flags: RendererStyleFlags2): void {
+        // TODO 
+        if (flags & RendererStyleFlags2.DashCase) {
+            el.style.setProperty(
+                style, value, !!(flags & RendererStyleFlags2.Important) ? 'important' : '');
+        } else {
+            el.style[style] = value;
+        }
+    }
+
+    removeStyle(el: any, style: string, flags: RendererStyleFlags2): void {
+        // TODO
+        if (flags & RendererStyleFlags2.DashCase) {
+            el.style.removeProperty(style);
+        } else {
+            // IE requires '' instead of null
+            // see https://github.com/angular/angular/issues/7916
+            el.style[style] = '';
+        }
+    }
+
+    setProperty(el: any, name: string, value: any): void {
+        if (el._intactNode) {
+            el._intactNode.setProperty(name, value);
+        } else {
+            checkNoSyntheticProp(name, 'property');
+            el[name] = value;
+        }
+    }
+
+    setValue(node: any, value: string): void {
+        if (node._intactNode) {
+            node._intactNode.setProperty('value', value);
+        } else {
+            node.nodeValue = value; 
+        }
+    }
+
+    listen(target: 'window' | 'document' | 'body' | any, event: string, callback: (event: any) => boolean): () => void {
+        // TODO
+        checkNoSyntheticProp(event, 'listener');
+        if (typeof target === 'string') {
+            return <() => void>this.eventManager.addGlobalEventListener(
+                target, event, decoratePreventDefault(callback));
+        } else if (target._intactNode) {
+            target._intactNode.setProperty(`ev-${event}`, callback);
+            return () => null;
+        }
+        return <() => void>this.eventManager.addEventListener(
+            target, event, decoratePreventDefault(callback)) as () => void;
+    }
+}
+
+const AT_CHARCODE = (() => '@'.charCodeAt(0))();
+function checkNoSyntheticProp(name: string, nameKind: string) {
+    if (name.charCodeAt(0) === AT_CHARCODE) {
+        throw new Error(
+            `Found the synthetic ${nameKind} ${name}. Please include either "BrowserAnimationsModule" or "NoopAnimationsModule" in your application.`);
+    }
+}
+
+class EmulatedEncapsulationDomRenderer2 extends DefaultDomRenderer2 {
+    private contentAttr: string;
+    private hostAttr: string;
+
+    constructor(
+        eventManager: EventManager, sharedStylesHost: DomSharedStylesHost,
+        private component: RendererType2, appId: string) {
+        super(eventManager);
+        const styles = flattenStyles(appId + '-' + component.id, component.styles, []);
+        sharedStylesHost.addStyles(styles);
+
+        this.contentAttr = shimContentAttribute(appId + '-' + component.id);
+        this.hostAttr = shimHostAttribute(appId + '-' + component.id);
+    }
+
+    applyToHost(element: any) { super.setAttribute(element, this.hostAttr, ''); }
+
+    createElement(parent: any, name: string): Element {
+        const el = super.createElement(parent, name);
+        super.setAttribute(el, this.contentAttr, '');
+        return el;
+    }
+}
+
+class ShadowDomRenderer extends DefaultDomRenderer2 {
+    private shadowRoot: any;
+
+    constructor(
+        eventManager: EventManager, private sharedStylesHost: DomSharedStylesHost,
+        private hostEl: any, private component: RendererType2) {
+        super(eventManager);
+        if (component.encapsulation === ViewEncapsulation.ShadowDom) {
+            this.shadowRoot = (hostEl as any).attachShadow({ mode: 'open' });
+        } else {
+            this.shadowRoot = (hostEl as any).createShadowRoot();
+        }
+        this.sharedStylesHost.addHost(this.shadowRoot);
+        const styles = flattenStyles(component.id, component.styles, []);
+        for (let i = 0; i < styles.length; i++) {
+            const styleEl = document.createElement('style');
+            styleEl.textContent = styles[i];
+            this.shadowRoot.appendChild(styleEl);
+        }
+    }
+
+    private nodeOrShadowRoot(node: any): any { return node === this.hostEl ? this.shadowRoot : node; }
+
+    destroy() { this.sharedStylesHost.removeHost(this.shadowRoot); }
+
+    appendChild(parent: any, newChild: any): void {
+        return super.appendChild(this.nodeOrShadowRoot(parent), newChild);
+    }
+    insertBefore(parent: any, newChild: any, refChild: any): void {
+        return super.insertBefore(this.nodeOrShadowRoot(parent), newChild, refChild);
+    }
+    removeChild(parent: any, oldChild: any): void {
+        return super.removeChild(this.nodeOrShadowRoot(parent), oldChild);
+    }
+    parentNode(node: any): any {
+        return this.nodeOrShadowRoot(super.parentNode(this.nodeOrShadowRoot(node)));
     }
 }
