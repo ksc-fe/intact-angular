@@ -15,8 +15,12 @@ export function createIntactComponent(template, methods?) {
 }
 
 export function createAppComponent(template) {
+    return createAngularComponent(template, 'app-root');
+}
+
+export function createAngularComponent(template, selector) {
     @Component({
-        selector: 'app-root',
+        selector,
         template, 
     })
     class AppComponent {};

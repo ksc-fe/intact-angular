@@ -161,7 +161,7 @@ export class IntactAngular extends Intact {
             if (instance && instance instanceof IntactAngular) {
                 return instance; 
             }
-            elDef = searchView.parentNodeDef.parent;
+            elDef = searchView.parent ? searchView.parentNodeDef.parent : null;
             searchView = searchView.parent;
         }
     }

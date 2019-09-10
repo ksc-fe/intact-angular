@@ -1,12 +1,16 @@
 import {async, ComponentFixture, TestBed, ComponentFixtureAutoDetect} from '@angular/core/testing';
 import {Component, ContentChild, NO_ERRORS_SCHEMA, TemplateRef, ViewChild} from '@angular/core';
 import {IntactAngular as Intact} from '../../lib/intact-angular';
-import {createIntactAngularComponent, createIntactComponent, createAppComponent, getFixture} from './utils';
+import {
+    createIntactAngularComponent, createIntactComponent,
+    createAppComponent, getFixture, createAngularComponent,
+} from './utils';
 import {IntactAngularBrowserModule} from '../../lib/module';
 
 const IntactChildrenComponent = createIntactAngularComponent(`<div>{self.get('children')}</div>`, 'k-children');
+const AngularChildrenComponent = createAngularComponent(`<div><ng-content></ng-content></div>`, 'app-children');
 
-describe('Basic test', () => {
+describe('Unit Tests', () => {
     function expect(input) {
         if (typeof input === 'string') {
             input = input.replace(/<!--[.\s\S]*?-->/g, '');
@@ -21,6 +25,46 @@ describe('Basic test', () => {
         const element = fixture.nativeElement;
 
         expect(element.innerHTML).toBe('<div>test</div>');
+    });
+
+    it('should render Intact component in Angular component', () => {
+        const AppComponent = createAppComponent(`<app-children><k-children>test</k-children></app-children>`);
+
+        const fixture = getFixture([AppComponent, IntactChildrenComponent, AngularChildrenComponent]) ;
+        const element = fixture.nativeElement;
+
+        expect(element.innerHTML).toBe('<app-children><div><div>test</div></div></app-children>');
+    });
+
+    it('should render nested Intact component and Angular Component', () => {
+        const AppComponent = createAppComponent(
+            `<app-children>
+                <k-children>
+                    <app-children>
+                        <k-children>test</k-children>
+                    </app-children>
+                </k-children>
+            </app-children>`
+        );
+
+        const fixture = getFixture([AppComponent, IntactChildrenComponent, AngularChildrenComponent]) ;
+        const element = fixture.nativeElement;
+
+        expect(element.innerHTML).toBe('<app-children><div><div><app-children><div><div>test</div></div></app-children></div></div></app-children>');
+    });
+
+    it('should render nested component in template of Angular component', () => {
+        const AngularComponet = createAngularComponent(`<k-children><ng-content></ng-content></k-children>`, 'app-component');
+        const AppComponent = createAppComponent(
+            `<k-children>
+                <app-component>test</app-component>
+            </k-children>`
+        );
+
+        const fixture = getFixture([AppComponent, IntactChildrenComponent, AngularComponet]) ;
+        const element = fixture.nativeElement;
+
+        expect(element.innerHTML).toBe("<div><app-component><div>test</div></app-component></div>");
     });
 
     it('should update children', () => {
