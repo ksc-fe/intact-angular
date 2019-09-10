@@ -36,6 +36,35 @@ describe('Unit Tests', () => {
         expect(element.innerHTML).toBe('<app-children><div><div>test</div></div></app-children>');
     });
 
+    it('should render nested Intact component', () => {
+        const AppComponent = createAppComponent(`<k-children><k-children>test</k-children></k-children>`);
+
+        const fixture = getFixture([AppComponent, IntactChildrenComponent]) ;
+        const element = fixture.nativeElement;
+        expect(element.innerHTML).toBe('<div><div>test</div></div>');
+    });
+
+    it('should render nested multiple Intact components', () => {
+        const AppComponent = createAppComponent(
+            `<k-children id="parent">
+                <k-children id="child">test1</k-children>
+                <k-children id="child">test2</k-children>
+            </k-children>`
+        );
+
+        const fixture = getFixture([AppComponent, IntactChildrenComponent]) ;
+        const element = fixture.nativeElement;
+        expect(element.innerHTML).toBe('<div><div>test1</div><div>test2</div></div>');
+    });
+
+    it('should render nested Intact component with element', () => {
+        const AppComponent = createAppComponent(`<k-children><div><k-children>test</k-children></div></k-children>`);
+
+        const fixture = getFixture([AppComponent, IntactChildrenComponent]) ;
+        const element = fixture.nativeElement;
+        expect(element.innerHTML).toBe('<div><div><div>test</div></div></div>');
+    });
+
     it('should render nested Intact component and Angular Component', () => {
         const AppComponent = createAppComponent(
             `<app-children>
@@ -140,6 +169,23 @@ describe('Unit Tests', () => {
         component.type = 'danger';
         fixture.detectChanges();
         expect(element.innerHTML).toBe('<div>danger</div>');
+    });
+
+    it('should do two way data binding', () => {
+        const TestComponent = createIntactAngularComponent(
+            `<div ev-click={self.onClick}>click</div>`,
+            'k-test',
+            {onClick: function() {
+                const value = this.get('value') || 0;
+                this.set('value', value + 1);
+            }}
+        );
+        const AppComponent = createAppComponent(`<k-test [(value)]="value"></k-test>value: {{ value }}`);
+
+        const fixture = getFixture([AppComponent, TestComponent]);
+        const element = fixture.nativeElement;
+        element.firstChild.click();
+        expect(element.innerHTML).toBe('<div>click</div>value: 1');
     });
 
     it('should bind event', () => {
@@ -272,32 +318,24 @@ describe('Unit Tests', () => {
         const fixture = getFixture([AppComponent, IntactChildrenComponent, SimpleComponent]);
     });
 
-    it('should render nested Intact component', () => {
-        const AppComponent = createAppComponent(`<k-children id="parent"><k-children id="child">test</k-children></k-children>`);
-
-        const fixture = getFixture([AppComponent, IntactChildrenComponent]) ;
-        const element = fixture.nativeElement;
-        expect(element.innerHTML).toBe('<div><div>test</div></div>');
-    });
-
-    it('should render nested multiple Intact components', () => {
+    it('should handle children vNode in Intact template', () => {
+        const GroupComponent = createIntactAngularComponent(
+            `<ul>
+                {self.get('children').map(vNode => {
+                    console.log(vNode);
+                    return vNode;
+                })}
+            </ul>`,
+            'k-group'
+        );
+        const ItemComponent = createIntactAngularComponent(`<li>{self.get('children')}</li>`, 'k-item');
         const AppComponent = createAppComponent(
-            `<k-children id="parent">
-                <k-children id="child">test1</k-children>
-                <k-children id="child">test2</k-children>
-            </k-children>`
+            `<k-group>
+                <k-item>1</k-item>
+                <k-item>2</k-item>
+            </k-group>`
         );
 
-        const fixture = getFixture([AppComponent, IntactChildrenComponent]) ;
-        const element = fixture.nativeElement;
-        expect(element.innerHTML).toBe('<div><div>test1</div><div>test2</div></div>');
-    });
-
-    it('should render nested Intact component with element', () => {
-        const AppComponent = createAppComponent(`<k-children><div><k-children>test</k-children></div></k-children>`);
-
-        const fixture = getFixture([AppComponent, IntactChildrenComponent]) ;
-        const element = fixture.nativeElement;
-        expect(element.innerHTML).toBe('<div><div><div>test</div></div></div>');
+        const fixture = getFixture([AppComponent, GroupComponent, ItemComponent]);
     });
 });

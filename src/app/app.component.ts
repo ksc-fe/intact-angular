@@ -9,6 +9,8 @@ export class AppComponent {
     title = 'intact-angular';
     disable = false;
 
+    counter = 1;
+
     onClick() {
         this.disable = !this.disable;
     }

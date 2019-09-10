@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewContainerRef, TemplateRef, ViewChild, ContentChild } from '@angular/core';
+import { Component, OnInit, ViewContainerRef, TemplateRef, ViewChild, ContentChild, EventEmitter, Input, Output } from '@angular/core';
 
 @Component({
   selector: 'app-hello',
@@ -6,20 +6,24 @@ import { Component, OnInit, ViewContainerRef, TemplateRef, ViewChild, ContentChi
   styleUrls: ['./hello.component.css']
 })
 export class HelloComponent implements OnInit {
-    data = [{name: 1}, {name: 2}];
+    @Input() counter = 0;
 
-    @ContentChild('scope', {static: false}) scope: TemplateRef<any>;
-    @ViewChild('container', {static: false, read: ViewContainerRef}) container: ViewContainerRef;
+    @Output() counterChange = new EventEmitter();
 
     constructor() { }
 
     ngOnInit() {
     }
 
-    ngAfterViewInit() {
-        const viewRef = this.scope.createEmbeddedView({
-            $implicit: {name: 1}
-        });
-        this.container.insert(viewRef);
+    add() {
+        this.counter++;
+        this.counterChange.emit(this.counter);
     }
+
+    // ngAfterViewInit() {
+        // const viewRef = this.scope.createEmbeddedView({
+            // $implicit: {name: 1}
+        // });
+        // this.container.insert(viewRef);
+    // }
 }

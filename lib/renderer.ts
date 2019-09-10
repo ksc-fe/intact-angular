@@ -316,6 +316,14 @@ class DefaultDomRenderer2 implements Renderer2 {
             return <() => void>this.eventManager.addGlobalEventListener(
                 target, event, decoratePreventDefault(callback));
         } else if (target._intactNode) {
+            // change event name, which like `valueChange` for two way binding, to `$change:value`
+            if (event.slice(-6) === 'Change') {
+                event = `$change:` + event.slice(0, -6);
+                const _cb = callback;
+                callback = function(c, v) {
+                    return _cb(v);
+                } as (event: any) => boolean;
+            }
             target._intactNode.setProperty(`ev-${event}`, callback);
             return () => null;
         }
