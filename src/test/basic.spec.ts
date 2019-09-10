@@ -1,5 +1,5 @@
 import {async, ComponentFixture, TestBed, ComponentFixtureAutoDetect} from '@angular/core/testing';
-import {Component, ContentChild, NO_ERRORS_SCHEMA, TemplateRef} from '@angular/core';
+import {Component, ContentChild, NO_ERRORS_SCHEMA, TemplateRef, ViewChild} from '@angular/core';
 import {IntactAngular as Intact} from '../../lib/intact-angular';
 import {createIntactAngularComponent, createIntactComponent, createAppComponent, getFixture} from './utils';
 import {IntactAngularBrowserModule} from '../../lib/module';
@@ -152,22 +152,22 @@ describe('Basic test', () => {
         const fixture = getFixture<AppComponent>([AppComponent, TestComponent]);
         const element = fixture.nativeElement;
         const component = fixture.componentInstance;
-        expect(element.innerHTML).toBe('<div>begin<div>children</div><div><span>end</span><b>!</b></div></div>');
+        expect(element.innerHTML).toBe('<div><intact-content>begin</intact-content><div>children</div><div><intact-content><span>end</span><b>!</b></intact-content></div></div>');
 
         component.show = false;
         fixture.detectChanges();
-        expect(element.innerHTML).toBe('<div>begin<div>children</div><div><b>!</b></div></div>');
+        expect(element.innerHTML).toBe('<div><intact-content>begin</intact-content><div>children</div><div><intact-content><b>!</b></intact-content></div></div>');
 
         component.show = true;
         fixture.detectChanges();
-        expect(element.innerHTML).toBe('<div>begin<div>children</div><div><span>end</span><b>!</b></div></div>');
+        expect(element.innerHTML).toBe('<div><intact-content>begin</intact-content><div>children</div><div><intact-content><span>end</span><b>!</b></intact-content></div></div>');
     });
 
     it('should render scope blocks', () => {
         const TestComponent = createIntactAngularComponent(
             `<div>
-                <div v-for={{ self.get('data') }}>
-                    <b:template args={{scope: value}} />
+                <div v-for={self.get('data')}>
+                    <b:template args={[value]} />
                 </div>
             </div>`,
             `k-test`,
@@ -177,20 +177,32 @@ describe('Basic test', () => {
 
         @Component({
             selector: `app-root`,
-            template: `<k-test [data]="data">
+            template: `<k-test [data]="data" #test>
                 <div>children</div> 
-                <ng-template #template let-scope="scope">
+                <ng-template #template let-scope="$implicit[0]">
                     <div>{{scope.name}}</div>
                 </ng-template>
             </k-test>`
         })
         class AppComponent {
+            @ViewChild('test', {static: true}) test;
             data = [{name: 'aaa'}, {name: 'bbb'}];
         }
 
         const fixture = getFixture<AppComponent>([AppComponent, TestComponent]);
         const element = fixture.nativeElement;
+        expect(element.innerHTML).toBe("<div><div><intact-content><div>aaa</div></intact-content></div><div><intact-content><div>bbb</div></intact-content></div></div>");
 
-        console.log(element);
+        const component = fixture.componentInstance;
+        component.data[0].name = 'ccc';
+        fixture.detectChanges();
+        expect(element.innerHTML).toBe("<div><div><intact-content><div>ccc</div></intact-content></div><div><intact-content><div>bbb</div></intact-content></div></div>");
+
+        component.data = [{name: 'ddd'}];
+        fixture.detectChanges();
+        expect(element.innerHTML).toBe("<div><div><intact-content><div>ddd</div></intact-content></div></div>");
+
+        component.test.set('data', [{name: 'eee'}]);
+        expect(element.innerHTML).toBe("<div><div><intact-content><div>eee</div></intact-content></div></div>");
     });
 });

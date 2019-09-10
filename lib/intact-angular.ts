@@ -3,7 +3,7 @@ import {
     Component, ElementRef, ViewContainerRef, 
     ChangeDetectorRef, ViewChild, TemplateRef,
 } from '@angular/core';
-import {Wrapper} from './wrapper';
+import {Wrapper, BlockWrapper} from './wrapper';
 import {IntactNode} from './intact-node';
 import {decorate, BLOCK_NAME_PREFIX} from './decorate';
 
@@ -17,7 +17,7 @@ export class IntactAngular extends Intact {
     private props;
     private _blockConstructor: boolean = true;
     private _placeholder;
-    private __blocks;
+    private __blocks__;
 
     @ViewChild('container', {read: ViewContainerRef, static: true}) container: ViewContainerRef;
 
@@ -72,7 +72,7 @@ export class IntactAngular extends Intact {
             return h(Wrapper, {dom});
         });
 
-        const props = {...intactNode.props, children, _blocks: this.__blocks};
+        const props = {...intactNode.props, children, _blocks: this.__blocks__};
 
         this.vNode = h(this.constructor, props);
         this.vNode.children = this;
@@ -85,7 +85,7 @@ export class IntactAngular extends Intact {
         const container = this.container;
         const intactNode: IntactNode = placeholder._intactNode;
         const blocks = (<any>this.constructor).__prop__metadata__;
-        const _blocks = this.__blocks = {};
+        const _blocks = this.__blocks__ = {};
         for (let name in blocks) {
             if (blocks[name][0].read !== TemplateRef) continue;
 
@@ -93,23 +93,12 @@ export class IntactAngular extends Intact {
             if (!ref) continue;
 
             name = name.substring(BLOCK_NAME_PREFIX.length);
-            _blocks[name] = function fn(__nouse__, data) {
-                if ((<any>fn)._cache) return (<any>fn)._cache;
-
-                const viewRef = ref.createEmbeddedView({$implicit: data});
-                console.log(viewRef);
-                debugger;
-                placeholder._block = name;
-                intactNode.blocks[name] = [];
-                container.insert(viewRef, 0);
-                placeholder._block = null;
-
-                const vNodes = (<any>fn)._cache = intactNode.blocks[name].map(dom => {
-                    return h(Wrapper, {dom});
+            _blocks[name] = (__nouse__, ...args) => {
+                return h(BlockWrapper, {
+                    templateRef: ref, 
+                    context: args,
                 });
-
-                return vNodes;
-            }
+            };
         }
     }
 }
