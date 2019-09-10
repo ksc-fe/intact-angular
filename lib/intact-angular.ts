@@ -144,6 +144,7 @@ export class IntactAngular extends Intact {
     }
 
     _findParentIntactComponent() {
+        // TODO: remove redundant operations
         let {_view: searchView, _elDef: elDef} = (<any>this.viewContainerRef);
         elDef = elDef.parent;
         while (searchView && elDef) {
