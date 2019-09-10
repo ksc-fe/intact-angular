@@ -1,6 +1,6 @@
 import {Component, ContentChild, TemplateRef} from '@angular/core';
 
-export const componentTemplate = `<ng-content></ng-content><ng-container #container></ng-container>`;
+export const componentTemplate = `<ng-content></ng-content>`;
 
 export const BLOCK_NAME_PREFIX = '__block__';
 

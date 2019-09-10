@@ -156,26 +156,20 @@ class DefaultDomRenderer2 implements Renderer2 {
         if (parent) {
             if (parent._intactNode) {
                 const name = parent._block;
-                if (name) {
-                    // it is appending block child
-                    const blocks = parent._intactNode.blocks;
-                    blocks[name].push(newChild);
+                // it is appending child
+                if (!refChild) {
+                    this.appendChild(parent, newChild);
                 } else {
-                    // it is appending child
-                    if (!refChild) {
-                        this.appendChild(parent, newChild);
-                    } else {
-                        const children = parent._intactNode.children;
-                        const index = children.indexOf(refChild);
+                    const children = parent._intactNode.children;
+                    const index = children.indexOf(refChild);
 
-                        children.splice(index, 0, newChild);
-                        // update nextSibling
-                        newChild._parentNode = parent;
-                        newChild._nextSibling = refChild;
-                        if (index > 0) {
-                            children[index - 1]._nextSibing = newChild;
-                        } 
-                    }
+                    children.splice(index, 0, newChild);
+                    // update nextSibling
+                    newChild._parentNode = parent;
+                    newChild._nextSibling = refChild;
+                    if (index > 0) {
+                        children[index - 1]._nextSibing = newChild;
+                    } 
                 }
             } else {
                 parent.insertBefore(newChild, refChild && (refChild._realElement || refChild));

@@ -20,7 +20,7 @@ export class BlockWrapper {
 
     update(lastVNode, nextVNode) {
         const newContext = nextVNode.props.context;
-        this.viewRef.context.$implicit = newContext;
+        this.viewRef.context.args = newContext;
         this.viewRef.detectChanges();
         return this.placeholder;
     }
@@ -32,7 +32,7 @@ export class BlockWrapper {
     _render(vNode) {
         const placeholder = this.placeholder = document.createElement('intact-content');
         const {templateRef, context} = this.vNode.props;
-        const viewRef = this.viewRef = templateRef.createEmbeddedView({$implicit: context});
+        const viewRef = this.viewRef = templateRef.createEmbeddedView({args: context});
         viewRef.rootNodes.forEach(dom => {
             placeholder.appendChild(dom);
         });

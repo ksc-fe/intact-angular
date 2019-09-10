@@ -11,7 +11,7 @@ export class Button extends Intact {
         <b:suffix />
         <ul>
             <li v-for={self.get('list')}>
-                <b:item args={value} />
+                <b:item args={[value]} />
             </li>
         </ul>
     </div>`;

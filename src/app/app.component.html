@@ -8,7 +8,7 @@
     <ng-template #prefix>
         <b>prefix</b>
     </ng-template>
-    <ng-template let-scope #item>
+    <ng-template let-scope="args[0]" #item>
         {{ scope.name }}
     </ng-template>
 </k-button>

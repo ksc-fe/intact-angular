@@ -179,7 +179,7 @@ describe('Basic test', () => {
             selector: `app-root`,
             template: `<k-test [data]="data" #test>
                 <div>children</div> 
-                <ng-template #template let-scope="$implicit[0]">
+                <ng-template #template let-scope="args[0]">
                     <div>{{scope.name}}</div>
                 </ng-template>
             </k-test>`
@@ -204,5 +204,56 @@ describe('Basic test', () => {
 
         component.test.set('data', [{name: 'eee'}]);
         expect(element.innerHTML).toBe("<div><div><intact-content><div>eee</div></intact-content></div></div>");
+    });
+
+    it('should get parentVNode', () => {
+        const SimpleComponent = createIntactAngularComponent(`<div>test</div>`, 'k-simple', {
+            _beforeCreate() {
+                const vNode = this.parentVNode;
+                expect(vNode).not.toBeUndefined();
+                expect(vNode.parentVNode).toBeUndefined();
+                expect(vNode.tag === IntactChildrenComponent).toBe(true);
+                expect(vNode.children instanceof IntactChildrenComponent).toBeTruthy();
+            }
+        });
+        @Component({
+            selector: `app-root`,
+            template: `<k-children #parent id="parent"><k-simple #child id="child">test</k-simple></k-children>`
+        })
+        class AppComponent {
+            @ViewChild('parent', {static: true}) parent;
+            @ViewChild('child', {static: true}) child;
+        }
+
+        const fixture = getFixture([AppComponent, IntactChildrenComponent, SimpleComponent]);
+    });
+
+    it('should render nested Intact component', () => {
+        const AppComponent = createAppComponent(`<k-children id="parent"><k-children id="child">test</k-children></k-children>`);
+
+        const fixture = getFixture([AppComponent, IntactChildrenComponent]) ;
+        const element = fixture.nativeElement;
+        expect(element.innerHTML).toBe('<div><div>test</div></div>');
+    });
+
+    it('should render nested multiple Intact components', () => {
+        const AppComponent = createAppComponent(
+            `<k-children id="parent">
+                <k-children id="child">test1</k-children>
+                <k-children id="child">test2</k-children>
+            </k-children>`
+        );
+
+        const fixture = getFixture([AppComponent, IntactChildrenComponent]) ;
+        const element = fixture.nativeElement;
+        expect(element.innerHTML).toBe('<div><div>test1</div><div>test2</div></div>');
+    });
+
+    it('should render nested Intact component with element', () => {
+        const AppComponent = createAppComponent(`<k-children><div><k-children>test</k-children></div></k-children>`);
+
+        const fixture = getFixture([AppComponent, IntactChildrenComponent]) ;
+        const element = fixture.nativeElement;
+        expect(element.innerHTML).toBe('<div><div><div>test</div></div></div>');
     });
 });
