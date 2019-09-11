@@ -22,6 +22,8 @@ export class IntactAngular extends Intact {
     private __parent__;
     private _appendQueue;
 
+    public cancelAppendedQueue: boolean = false;
+
     // @ViewChild('container', {read: ViewContainerRef, static: true}) container: ViewContainerRef;
 
     constructor(
@@ -57,6 +59,7 @@ export class IntactAngular extends Intact {
     ngAfterViewInit() {
         console.log('ngAfterViewInit', this);
 
+        // console.log(this.injector.get((<any>this).find));
         const parent = this.__parent__ =  this._findParentIntactComponent();
 
         this._initAppendQueue();
@@ -67,11 +70,13 @@ export class IntactAngular extends Intact {
         const props = this._normalizeProps();
         this._constructor(props);
 
-        const dom = (<any>this).init(null, this.vNode);
-
-        placeholder._realElement = dom;
-
         this._appendQueue.push(() => {
+            if (this.cancelAppendedQueue) return;
+
+            const dom = (<any>this).init(null, this.vNode);
+            dom._intactNode = placeholder._intactNode;
+
+            placeholder._realElement = dom;
             placeholder.parentNode.replaceChild(dom, placeholder);
         });
 
@@ -86,6 +91,8 @@ export class IntactAngular extends Intact {
     ngAfterViewChecked() {
         console.log('ngAfterViewChecked', (<any>this).get('id'));
 
+        if (!this.vNode.dom) return;
+
         const lastVNode = this.vNode;
         this._initVNode();
         this._normalizeProps();
@@ -95,6 +102,7 @@ export class IntactAngular extends Intact {
 
     ngOnDestroy() {
         console.log('ngOnDestroy');
+        if (this.cancelAppendedQueue) return;
 
         (<any>this).destroy();
     }
@@ -102,24 +110,30 @@ export class IntactAngular extends Intact {
     _normalizeProps() {
         const placeholder = this._placeholder; 
         const intactNode: IntactNode = placeholder._intactNode;
+        intactNode.instance = this;
         const children = intactNode.children.map(dom => {
+            const node = (<any>dom)._intactNode;
+            if (node) {
+                node.instance.cancelAppendedQueue = true;
+                return h(node.instance);
+            }
             return h(Wrapper, {dom});
         });
 
         const props = {...intactNode.props, children, _blocks: this.__blocks__};
 
         this.vNode.props = props;
-        const parent = this.__parent__;
-        Object.defineProperty(this, 'parentVNode', {
-            get() {
-                return parent && parent.vNode;
-            }
-        });
-        Object.defineProperty(this.vNode, 'parentVNode', {
-            get() {
-                return parent && parent.vNode;
-            }
-        });
+        // const parent = this.__parent__;
+        // Object.defineProperty(this, 'parentVNode', {
+            // get() {
+                // return parent && parent.vNode;
+            // }
+        // });
+        // Object.defineProperty(this.vNode, 'parentVNode', {
+            // get() {
+                // return parent && parent.vNode;
+            // }
+        // });
 
         return props;
     }
@@ -147,20 +161,22 @@ export class IntactAngular extends Intact {
         // TODO: remove redundant operations
         let {_view: searchView, _elDef: elDef} = (<any>this.viewContainerRef);
         elDef = elDef.parent;
-        while (searchView && elDef) {
-            // find the component element
-            let componentProvider;
-            do {
-                componentProvider = elDef.element.componentProvider;
-                if (componentProvider) break;
-                elDef = elDef.parent;
-                if (!elDef) return;
-            } while (!componentProvider)
-            const nodeIndex = componentProvider.nodeIndex;
-            const providerData = searchView.nodes[nodeIndex];
-            const instance = providerData.instance;
-            if (instance && instance instanceof IntactAngular) {
-                return instance; 
+        while (searchView) {
+            if (elDef) {
+                // find the component element
+                let componentProvider;
+                do {
+                    componentProvider = elDef.element.componentProvider;
+                    if (componentProvider) break;
+                    elDef = elDef.parent;
+                    if (!elDef) return;
+                } while (!componentProvider)
+                const nodeIndex = componentProvider.nodeIndex;
+                const providerData = searchView.nodes[nodeIndex];
+                const instance = providerData.instance;
+                if (instance && instance instanceof IntactAngular) {
+                    return instance; 
+                }
             }
             elDef = searchView.parent ? searchView.parentNodeDef.parent : null;
             searchView = searchView.parent;
@@ -187,7 +203,7 @@ export class IntactAngular extends Intact {
         const parent = this.__parent__;
         if (!this._appendQueue || this._appendQueue.done) {
             if (parent) {
-                if (parent._appendQueue) {
+                if (parent._appendQueue && !parent._appendQueue.done) {
                     // it indicates that another child has inited the queue
                     this._appendQueue = parent._appendQueue;
                 } else {

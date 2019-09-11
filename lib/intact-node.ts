@@ -3,11 +3,11 @@ export type StringMap<T = any> = {[index: string]: T};
 export class IntactNode {
     private _text: string;
     private _parent: HTMLElement | IntactNode;
-    private _childrenToAppend: Array<HTMLElement> = [];
 
     public props = {};
     public children: Array<HTMLElement> = [];
     public blocks: any = {};
+    public instance;
 
     set parent(parent: HTMLElement | IntactNode) {
         this._parent = parent;

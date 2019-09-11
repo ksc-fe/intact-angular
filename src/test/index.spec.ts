@@ -323,19 +323,38 @@ describe('Unit Tests', () => {
             `<ul>
                 {self.get('children').map(vNode => {
                     console.log(vNode);
+                    vNode.props.className = 'k-item';
                     return vNode;
                 })}
             </ul>`,
-            'k-group'
+            'k-group', 
+            {_init() {
+                this.Item = ItemComponent;
+            }}
         );
-        const ItemComponent = createIntactAngularComponent(`<li>{self.get('children')}</li>`, 'k-item');
-        const AppComponent = createAppComponent(
-            `<k-group>
-                <k-item>1</k-item>
-                <k-item>2</k-item>
+        const ItemComponent = createIntactAngularComponent(
+            `<li class={self.get('className')}>{self.get('children')}</li>`,
+            'k-item',
+            // {
+                // ngAfterViewInit() {
+                    // console.log(this);
+                // }
+            // }
+        );
+        @Component({
+            selector: 'app-root',
+            template: `<k-group>
+                <k-item *ngFor="let v of list">{{v}}</k-item>
             </k-group>`
-        );
+        })
+        class AppComponent {
+            list = ['1', '2'];
+        }
 
-        const fixture = getFixture([AppComponent, GroupComponent, ItemComponent]);
+        const fixture = getFixture<AppComponent>([AppComponent, GroupComponent, ItemComponent]);
+        const component = fixture.componentInstance;
+
+        component.list = ['3', '4'];
+        fixture.detectChanges();
     });
 });
