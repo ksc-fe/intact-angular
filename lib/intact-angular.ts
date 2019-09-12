@@ -28,27 +28,20 @@ export class IntactAngular extends Intact {
     constructor(
         private elRef: ElementRef,
         private viewContainerRef: ViewContainerRef,
-        // private changeDectectorRef: ChangeDetectorRef,
         private injector: Injector,
     ) {
         super();
 
-        // define vNode firstly, then update its props;
-        this._initVNode();
+        if (elRef instanceof ElementRef) {
+            // is called in Angular
+            // define vNode firstly, then update its props;
+            this._initVNode();
+        } else {
+            // is called in Intact
+            this._blockConstructor = false;
+            this._constructor(elRef);
+        }
     }
-
-    // ngOnInit() {
-        // console.log('ngOnInit', this);
-    // }
-
-    // ngAfterContentInit() {
-        // console.log('ngAfterContentInit', this);
-    // }
-
-    // mount(...args) {
-        // console.log('mount');
-        // super.mount(...args);
-    // }
 
     _constructor(props) {
         if (this._blockConstructor) return;
@@ -80,9 +73,6 @@ export class IntactAngular extends Intact {
         this._pushUpdateParentVNodeCallback();
 
         this._triggerAppendQueue();
-
-        // for Error: ExpressionChangedAfterItHasBeenCheckedError
-        // this.changeDectectorRef.detectChanges();
     }
 
     ngAfterViewChecked() {

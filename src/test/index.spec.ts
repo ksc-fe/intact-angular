@@ -1,11 +1,12 @@
 import {async, ComponentFixture, TestBed, ComponentFixtureAutoDetect} from '@angular/core/testing';
-import {Component, ContentChild, NO_ERRORS_SCHEMA, TemplateRef, ViewChild} from '@angular/core';
+import {Component, ContentChild, NO_ERRORS_SCHEMA, TemplateRef, ViewChild, ViewContainerRef, ElementRef} from '@angular/core';
 import {IntactAngular as Intact} from '../../lib/intact-angular';
 import {
     createIntactAngularComponent, createIntactComponent,
     createAppComponent, getFixture, createAngularComponent,
 } from './utils';
 import {IntactAngularBrowserModule} from '../../lib/module';
+import {functionalWrapper} from '../../lib/functional';
 
 const IntactChildrenComponent = createIntactAngularComponent(`<div>{self.get('children')}</div>`, 'k-children');
 const AngularChildrenComponent = createAngularComponent(`<div><ng-content></ng-content></div>`, 'app-children');
@@ -297,27 +298,18 @@ describe('Unit Tests', () => {
     });
 
     it('should render Intact functional component', () => {
-        const h = (<any>Intact).Vdt.miss.h;
-        const FunctionalComponent = function(props) {
-            return [
+        const {h, render} = (<any>Intact).Vdt.miss;
+        const FunctionalComponent = functionalWrapper(function(props) {
+            return h('k-wrapper', null, [
                 h(IntactChildrenComponent, props),
                 h(IntactChildrenComponent, null, 'two')
-            ];
-        };
-        @Component({
-            selector: 'k-functional',
-            template: `<ng-content></ng-content>`
-        })
-        class TestComponent {
-            ngAfterViewInit() {
-                 
-            }
-        }
-
+            ]);
+        }, 'k-functional');
         const AppComponent = createAppComponent(`<k-functional>test</k-functional>`);
 
-        const fixture = getFixture([AppComponent, TestComponent]);
+        const fixture = getFixture([AppComponent, FunctionalComponent]);
         const element = fixture.nativeElement;
+        expect(element.innerHTML).toBe('<k-wrapper><div>test</div><div>two</div></k-wrapper>');
     });
 
     it('should get parentVNode of nested Intact component', () => {
