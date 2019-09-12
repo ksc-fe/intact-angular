@@ -173,7 +173,7 @@ class DefaultDomRenderer2 implements Renderer2 {
                     newChild._parentNode = parent;
                     newChild._nextSibling = refChild;
                     if (index > 0) {
-                        children[index - 1]._nextSibing = newChild;
+                        children[index - 1]._nextSibling = newChild;
                     } 
                 }
             } else {

@@ -30,6 +30,7 @@ export function createAngularComponent(template, selector) {
 
 export function createIntactAngularComponent(template, selector, methods?, blocks?) {
     const IntactComponent = createIntactComponent(template, methods);
+    (<any>IntactComponent).displayName = selector;
 
     return Intact.decorate(IntactComponent, selector, blocks);
 }

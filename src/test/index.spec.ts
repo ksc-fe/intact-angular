@@ -296,10 +296,34 @@ describe('Unit Tests', () => {
         expect(element.innerHTML).toBe("<div><div><intact-content><div>eee</div></intact-content></div></div>");
     });
 
-    it('should get parentVNode', () => {
+    it('should render Intact functional component', () => {
+        const h = (<any>Intact).Vdt.miss.h;
+        const FunctionalComponent = function(props) {
+            return [
+                h(IntactChildrenComponent, props),
+                h(IntactChildrenComponent, null, 'two')
+            ];
+        };
+        @Component({
+            selector: 'k-functional',
+            template: `<ng-content></ng-content>`
+        })
+        class TestComponent {
+            ngAfterViewInit() {
+                 
+            }
+        }
+
+        const AppComponent = createAppComponent(`<k-functional>test</k-functional>`);
+
+        const fixture = getFixture([AppComponent, TestComponent]);
+        const element = fixture.nativeElement;
+    });
+
+    it('should get parentVNode of nested Intact component', () => {
         const SimpleComponent = createIntactAngularComponent(`<div>test</div>`, 'k-simple', {
             _beforeCreate() {
-                const vNode = this.parentVNode;
+                const vNode = this.parentVNode.parentVNode;
                 expect(vNode).not.toBeUndefined();
                 expect(vNode.parentVNode).toBeUndefined();
                 expect(vNode.tag === IntactChildrenComponent).toBe(true);
@@ -318,11 +342,58 @@ describe('Unit Tests', () => {
         const fixture = getFixture([AppComponent, IntactChildrenComponent, SimpleComponent]);
     });
 
+    it('should get parentVNode of nested Intact component with element', () => {
+        const SimpleComponent = createIntactAngularComponent(`<div>test</div>`, 'k-simple', {
+            _beforeCreate() {
+                const vNode = this.parentVNode;
+                expect(vNode).not.toBeUndefined();
+                expect(vNode.parentVNode).toBeUndefined();
+                expect(vNode.tag === IntactChildrenComponent).toBe(true);
+                expect(vNode.children instanceof IntactChildrenComponent).toBeTruthy();
+            }
+        });
+        @Component({
+            selector: `app-root`,
+            template: `<k-children id="parent">
+                <header>
+                    <k-simple id="child">test</k-simple>
+                </header>
+            </k-children>`
+        })
+        class AppComponent {
+        }
+
+        const fixture = getFixture([AppComponent, IntactChildrenComponent, SimpleComponent]);
+    });
+
+    it('should get parentVNode of nested Intact component with Angular component', () => {
+        const SimpleComponent = createIntactAngularComponent(`<div>test</div>`, 'k-simple', {
+            _beforeCreate() {
+                const vNode = this.parentVNode;
+                expect(vNode).not.toBeUndefined();
+                expect(vNode.parentVNode).toBeUndefined();
+                expect(vNode.tag === IntactChildrenComponent).toBe(true);
+                expect(vNode.children instanceof IntactChildrenComponent).toBeTruthy();
+            },
+        });
+        @Component({
+            selector: `app-root`,
+            template: `<k-children id="parent">
+                <app-children>
+                    <k-simple id="child">test</k-simple>
+                </app-children>
+            </k-children>`
+        })
+        class AppComponent {
+        }
+
+        const fixture = getFixture([AppComponent, IntactChildrenComponent, SimpleComponent, AngularChildrenComponent]);
+    });
+
     it('should handle children vNode in Intact template', () => {
         const GroupComponent = createIntactAngularComponent(
             `<ul>
                 {self.get('children').map(vNode => {
-                    console.log(vNode);
                     vNode.props.className = 'k-item';
                     return vNode;
                 })}
@@ -335,11 +406,6 @@ describe('Unit Tests', () => {
         const ItemComponent = createIntactAngularComponent(
             `<li class={self.get('className')}>{self.get('children')}</li>`,
             'k-item',
-            // {
-                // ngAfterViewInit() {
-                    // console.log(this);
-                // }
-            // }
         );
         @Component({
             selector: 'app-root',
@@ -353,8 +419,15 @@ describe('Unit Tests', () => {
 
         const fixture = getFixture<AppComponent>([AppComponent, GroupComponent, ItemComponent]);
         const component = fixture.componentInstance;
+        const element = fixture.nativeElement;
+        expect(element.innerHTML).toBe('<ul><li class="k-item">1</li><li class="k-item">2</li></ul>');
 
         component.list = ['3', '4'];
         fixture.detectChanges();
+        expect(element.innerHTML).toBe('<ul><li class="k-item">3</li><li class="k-item">4</li></ul>');
+
+        component.list[0] = '5';
+        fixture.detectChanges();
+        expect(element.innerHTML).toBe('<ul><li class="k-item">5</li><li class="k-item">4</li></ul>');
     });
 });
