@@ -298,7 +298,7 @@ describe('Unit Tests', () => {
     });
 
     it('should render Intact functional component', () => {
-        const {h, render} = (<any>Intact).Vdt.miss;
+        const {h} = (<any>Intact).Vdt.miss;
         const FunctionalComponent = functionalWrapper(function(props) {
             return h('k-wrapper', null, [
                 h(IntactChildrenComponent, props),
@@ -310,6 +310,42 @@ describe('Unit Tests', () => {
         const fixture = getFixture([AppComponent, FunctionalComponent]);
         const element = fixture.nativeElement;
         expect(element.innerHTML).toBe('<k-wrapper><div>test</div><div>two</div></k-wrapper>');
+    });
+
+    it('should render blocks in Intact functional component', () => {
+        const {h} = (<any>Intact).Vdt.miss;
+        const Component = createIntactComponent(`<div><b:test /></div>`);
+        const FunctionalComponent = functionalWrapper(function(props) {
+            return h(Component, props);
+        }, 'k-functional', ['test']);
+        const AppComponent = createAppComponent(
+            `<k-functional>
+                <ng-template #test>
+                    <span>test</span>
+                </ng-template>
+            </k-functional>`
+        );
+
+        const fixture = getFixture([AppComponent, FunctionalComponent]);
+        const element = fixture.nativeElement;
+        expect(element.innerHTML).toBe('<div><intact-content><span>test</span></intact-content></div>');
+    });
+
+    it('should render class and style', () => {
+        const TestComponent = createIntactAngularComponent(
+            `<div class={self.get('className')} style={self.get('style')}>test</div>`,
+            `k-test`
+        );
+        const AppComponent = createAppComponent(
+            `<k-test 
+                class="a" [ngClass]="{b: true, c: false}" [class.d]="true"
+                style="color: red;" [ngStyle]="{'font-size': '12px'}" [style.display]="'block'"
+            ></k-test>`
+        );
+
+        const fixture = getFixture([AppComponent, TestComponent]);
+        const element = fixture.nativeElement;
+        expect(element.innerHTML).toBe('<div class="a b d" style="color: red; font-size: 12px; display: block;">test</div>');
     });
 
     it('should get parentVNode of nested Intact component', () => {

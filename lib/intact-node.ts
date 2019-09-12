@@ -1,45 +1,42 @@
 export type StringMap<T = any> = {[index: string]: T};
 
 export class IntactNode {
-    private _text: string;
-    private _parent: HTMLElement | IntactNode;
-
     public props = {};
     public children: Array<HTMLElement> = [];
     public blocks: any = {};
     public instance;
+    public className: object | null = null;
+    public style = null;
 
-    set parent(parent: HTMLElement | IntactNode) {
-        this._parent = parent;
-    }
-    get parent(): HTMLElement | IntactNode {
-        return this._parent;
-    }
-
-    constructor(private type?: string) {
-
-    }
-
-    setAttribute(name: string, value: string) {
-        this.setAttributes({[name]: value});
-    }
-
-    setAttributes(attributes: StringMap<string>) {
-        this.setProperties(attributes);
-    }
+    constructor(private type?: string) {  }
 
     setProperty(name: string, value: any) {
-        this.setProperties({[name]: value});
+        // class has handled in addClass method
+        if (name === 'class') return;
+        if (name === 'style') {
+            this.initStyle();
+            this.style.setAttribute('style', value);
+        }
+        this.props[name] = value;
     }
 
-    setProperties(properties: StringMap) {
-        Object.assign(this.props, properties);
+    removeProperty(name) {
+        delete this.props[name];
     }
 
-    asText(value: string) {
-        this._text = value;
+    addClass(name) {
+        if (!this.className) this.className = Object.create(null);
+        this.className[name] = true;
+    }
 
-        return this;
+    removeClass(name) {
+        if (this.className) {
+            delete this.className[name];
+        }
+    }
+
+    initStyle() {
+        if (!this.style) this.style = document.createElement('div');
     }
 }
 

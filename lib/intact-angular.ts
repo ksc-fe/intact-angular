@@ -9,6 +9,7 @@ import {IntactNode} from './intact-node';
 import {decorate, BLOCK_NAME_PREFIX} from './decorate';
 
 const {h} = Intact.Vdt.miss;
+const {className: intactClassName} = Intact.Vdt.utils;
 
 @Component({})
 export class IntactAngular extends Intact {
@@ -113,6 +114,15 @@ export class IntactAngular extends Intact {
             // we use the dom as key
             return h(Wrapper, {dom}, null, null, dom);
         });
+
+        // normalize className
+        if (intactNode.className) {
+            (<any>intactNode.props).className = intactClassName(intactNode.className);    
+        }
+        // normalize style
+        if (intactNode.style) {
+            (<any>intactNode.props).style = intactNode.style.style.cssText;
+        }
 
         const props = {...intactNode.props, children, _blocks: this.__blocks__};
 

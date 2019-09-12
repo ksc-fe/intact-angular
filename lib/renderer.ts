@@ -232,7 +232,7 @@ class DefaultDomRenderer2 implements Renderer2 {
                 el.setAttribute(name, value);
             }
         } else if (el._intactNode) {
-            el._intactNode.setAttribute(name, value);   
+            el._intactNode.setProperty(name, value);   
         } else {
             el.setAttribute(name, value);
         }
@@ -253,7 +253,7 @@ class DefaultDomRenderer2 implements Renderer2 {
             }
             
         } else if (el._intactNode) {
-            el._intactNode.removeAttribute(name);
+            el._intactNode.removeProperty(name);
         } else {
             el.removeAttribute(name);
         }
@@ -261,8 +261,7 @@ class DefaultDomRenderer2 implements Renderer2 {
 
     addClass(el: any, name: string): void { 
         if (el._intactNode) {
-            // TODO
-            el._intactNode.setProperty('className', name);
+            el._intactNode.addClass(name);
         } else {
             el.classList.add(name); 
         }
@@ -270,15 +269,17 @@ class DefaultDomRenderer2 implements Renderer2 {
 
     removeClass(el: any, name: string): void {
         if (el._intactNode) {
-            // TODO
-            el._intactNode.removeProperty('className');
+            el._intactNode.removeClass(name);
         } else {
             el.classList.remove(name); 
         }
     }
 
     setStyle(el: any, style: string, value: any, flags: RendererStyleFlags2): void {
-        // TODO 
+        if (el._intactNode) {
+            el._intactNode.initStyle();
+            el = el._intactNode.style;
+        } 
         if (flags & RendererStyleFlags2.DashCase) {
             el.style.setProperty(
                 style, value, !!(flags & RendererStyleFlags2.Important) ? 'important' : '');
@@ -288,7 +289,10 @@ class DefaultDomRenderer2 implements Renderer2 {
     }
 
     removeStyle(el: any, style: string, flags: RendererStyleFlags2): void {
-        // TODO
+        if (el._intactNode) {
+            el._intactNode.initStyle();
+            el = el._intactNode.style;
+        } 
         if (flags & RendererStyleFlags2.DashCase) {
             el.style.removeProperty(style);
         } else {
@@ -316,7 +320,6 @@ class DefaultDomRenderer2 implements Renderer2 {
     }
 
     listen(target: 'window' | 'document' | 'body' | any, event: string, callback: (event: any) => boolean): () => void {
-        // TODO
         checkNoSyntheticProp(event, 'listener');
         if (typeof target === 'string') {
             return <() => void>this.eventManager.addGlobalEventListener(
