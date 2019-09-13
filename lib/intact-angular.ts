@@ -124,7 +124,9 @@ export class IntactAngular extends Intact {
             const node = (<any>dom)._intactNode;
             if (node) {
                 node.instance.cancelAppendedQueue = true;
-                return h(node.instance, null, null, null, dom);
+                const vNode = h(node.instance, null, null, null, dom);
+                vNode.props = node.instance.vNode.props;
+                return vNode;
             }
             // angular can insert dom, so we must keep the key consistent
             // we use the dom as key

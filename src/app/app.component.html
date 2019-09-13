@@ -1,16 +1,13 @@
-<k-button type="primary" [disable]="disable" (click)="onClick()">
-    <span *ngIf="!disable">content {{ counter }}</span>
-    <b>test</b>
-    <ng-template #suffix>
-        <i *ngIf="disable">suffix1</i>
-        <b>suffix2</b>
-    </ng-template>
-    <ng-template #prefix>
-        <b>prefix</b>
-    </ng-template>
-    <ng-template let-scope="args[0]" #item>
-        {{ scope.name }}
-    </ng-template>
-</k-button>
 <app-hello [(counter)]="counter">
 </app-hello>
+<k-button-group checkType="radio" [(value)]="value">
+    <k-button value="beijing" size="small">北京</k-button>
+    <k-button value="shanghai" size="small">上海</k-button>
+</k-button-group>
+<k-table [data]="[{name: 1}, {name: 2}]">
+    <k-table-column key="name" title="Name">
+        <ng-template #template let-scope="args[0]">
+            {{ scope.name }}
+        </ng-template>
+    </k-table-column>
+</k-table>
