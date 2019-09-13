@@ -25,6 +25,9 @@ export class IntactAngular extends Intact {
     private __blocks__;
     private __parent__;
     private _appendQueue;
+    private mountedQueue;
+    private _shouldTrigger;
+    private __oldTriggerFlag;
 
     constructor(
         private elRef: ElementRef,
@@ -65,11 +68,17 @@ export class IntactAngular extends Intact {
         this._appendQueue.push(() => {
             if (this.cancelAppendedQueue) return;
 
+            this.__initMountedQueue();
+
             const dom = (<any>this).init(null, this.vNode);
             this.vNode.dom = dom;
             dom._intactNode = placeholder._intactNode;
             placeholder._realElement = dom;
             placeholder.parentNode.replaceChild(dom, placeholder);
+
+            this.mountedQueue.push(() => (<any>this).mount());
+
+            this.__triggerMountedQueue();
         });
         this._pushUpdateParentVNodeCallback();
 
@@ -77,6 +86,7 @@ export class IntactAngular extends Intact {
     }
 
     ngAfterViewChecked() {
+        // we can not ignore the first checked, because it may update block
         if (this.cancelAppendedQueue || !this.vNode.dom) return;
         console.log('ngAfterViewChecked', this);
 
@@ -86,9 +96,15 @@ export class IntactAngular extends Intact {
         this._initVNode();
         this._normalizeProps();
 
-        (<any>this).update(lastVNode, this.vNode);
+        this._appendQueue.push(() => {
+            this.__initMountedQueue();
 
+            (<any>this).update(lastVNode, this.vNode);
+
+            this.__triggerMountedQueue();
+        });
         this._pushUpdateParentVNodeCallback();
+
         this._triggerAppendQueue();
     }
 
@@ -212,5 +228,28 @@ export class IntactAngular extends Intact {
             this.parentVNode = parent && parent.vNode;
             this.vNode.parentVNode = this.parentVNode;
         });
+    }
+
+    __initMountedQueue() {
+        this.__oldTriggerFlag = this._shouldTrigger;
+        this._shouldTrigger = false;
+        if (!this.mountedQueue || this.mountedQueue.done) {
+            const parent = this.__parent__;
+            if (parent) {
+                if (parent.mountedQueue && !parent.mountedQueue.done) {
+                    this.mountedQueue = parent.mountedQueue;
+                    return;
+                }
+            }
+            this._shouldTrigger = true;
+            (<any>this)._initMountedQueue();
+        }
+    }
+
+    __triggerMountedQueue() {
+        if (this._shouldTrigger) {
+            (<any>this)._triggerMountedQueue();
+        }
+        this._shouldTrigger = this.__oldTriggerFlag;
     }
 }

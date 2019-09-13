@@ -1,5 +1,8 @@
 import {async, ComponentFixture, TestBed, ComponentFixtureAutoDetect} from '@angular/core/testing';
-import {Component, ContentChild, NO_ERRORS_SCHEMA, TemplateRef, ViewChild, ViewContainerRef, ElementRef} from '@angular/core';
+import {
+    Component, ContentChild, NO_ERRORS_SCHEMA, TemplateRef,
+    ViewChild, ViewContainerRef, ElementRef, Input
+} from '@angular/core';
 import {IntactAngular as Intact} from '../../lib/intact-angular';
 import {
     createIntactAngularComponent, createIntactComponent,
@@ -213,7 +216,7 @@ describe('Unit Tests', () => {
         expect(onClick).toHaveBeenCalledWith('test')
     });
 
-    it('should render blocks', () => {
+    it('should render basic blocks', () => {
         const TestComponent = createIntactAngularComponent(
             `<div>
                 <b:prefix>prefix</b:prefix>
@@ -457,5 +460,75 @@ describe('Unit Tests', () => {
         component.list[0] = '5';
         fixture.detectChanges();
         expect(element.innerHTML).toBe('<ul><li class="k-item">5</li><li class="k-item">4</li></ul>');
+    });
+
+    it('should call lifecycle methods of Angular component correctly', () => {
+        const ngOnInit = jasmine.createSpy();
+        const ngOnDestroy = jasmine.createSpy();
+        const ngAfterViewChecked = jasmine.createSpy();
+        @Component({
+            selector: 'app-angular',
+            template: `<div>{{a}}</div>`
+        })
+        class AngularComponet {
+            @Input() a: Number;
+            ngOnInit() { ngOnInit() }
+            ngAfterViewChecked() { ngAfterViewChecked() }
+            ngOnDestroy() { ngOnDestroy() }
+        }
+
+        const mount = jasmine.createSpy();
+        const update = jasmine.createSpy();
+        const destroy = jasmine.createSpy();
+        const IntactComponent = createIntactAngularComponent(
+            `<div>{self.get('children')}</div>`,
+            `k-children`,
+            {
+                _mount() {
+                    expect(this.element.parentNode.tagName).toBe('DIV');
+                    expect(this.element.outerHTML).toBe('<div><app-angular ng-reflect-a="1"><div>1</div></app-angular></div>');
+                    mount();
+                },
+                _update: update,
+                _destroy: destroy,
+            }
+        )
+        @Component({
+            selector: 'app-root',
+            template: `<k-children *ngIf="show"><app-angular [a]="a"></app-angular></k-children>`,
+        })
+        class AppComponent {
+            show = true;
+            a = 1;
+        }
+
+        const fixture = getFixture<AppComponent>([AppComponent, AngularComponet, IntactComponent]);
+        expect(ngOnInit.calls.count()).toEqual(1);
+        expect(ngAfterViewChecked.calls.count()).toEqual(1);
+        expect(ngOnDestroy.calls.count()).toEqual(0);
+        expect(mount.calls.count()).toEqual(1);
+        expect(update.calls.count()).toEqual(1);
+        expect(destroy.calls.count()).toEqual(0);
+
+        // update
+        const component = fixture.componentInstance;
+        component.a = 2;
+        fixture.detectChanges();
+        expect(ngOnInit.calls.count()).toEqual(1);
+        expect(ngAfterViewChecked.calls.count()).toEqual(3);
+        expect(ngOnDestroy.calls.count()).toEqual(0);
+        expect(mount.calls.count()).toEqual(1);
+        expect(update.calls.count()).toEqual(3);
+        expect(destroy.calls.count()).toEqual(0);
+
+        // destroy
+        component.show = false;
+        fixture.detectChanges();
+        expect(ngOnInit.calls.count()).toEqual(1);
+        expect(ngAfterViewChecked.calls.count()).toEqual(3);
+        expect(ngOnDestroy.calls.count()).toEqual(1);
+        expect(mount.calls.count()).toEqual(1);
+        expect(update.calls.count()).toEqual(3);
+        expect(destroy.calls.count()).toEqual(1);
     });
 });
