@@ -531,4 +531,38 @@ describe('Unit Tests', () => {
         expect(update.calls.count()).toEqual(3);
         expect(destroy.calls.count()).toEqual(1);
     });
+
+    it('should update children\'s props when Intact component has changed them', () => {
+        const onClick = jasmine.createSpy();
+        const TestComponent = createIntactAngularComponent(
+            `<div>{self.get('children')}</div>`,
+            `k-test`,
+            {
+                _init() {
+                    // this._changeProps();
+                    // this.on('$change:children', this._changeProps);
+                },
+
+                _changeProps() {
+                    const children = this.get('children.0');
+                    children.props['ev-click'] = onClick.bind(this);
+                    children.props.className = children.className + ' test';
+                },
+
+                _removeProps() {
+                    const children = this.get('children.0');
+                    children.props.className = '';
+                }
+            }
+        );
+        @Component({
+            selector: 'app-root',
+            template: `<k-test #test><div class="a" [ngClass]="{b: true}">click</div></k-test>`
+        })
+        class AppComponent {
+            // @ViewChild('test', {static: true, read: TestComponent}) test;
+        }
+
+        const fixture = getFixture([AppComponent, TestComponent]);
+    });
 });

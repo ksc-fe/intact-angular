@@ -1,13 +1,23 @@
 <app-hello [(counter)]="counter">
 </app-hello>
-<k-button-group checkType="radio" [(value)]="value">
+<k-button-group checkType="radio" [(value)]="city">
     <k-button value="beijing" size="small">北京</k-button>
     <k-button value="shanghai" size="small">上海</k-button>
 </k-button-group>
-<k-table [data]="[{name: 1}, {name: 2}]">
+<k-table [data]="[{name: 'Javey', age: 18}, {name: 'Jiawei', age: 28}]">
     <k-table-column key="name" title="Name">
         <ng-template #template let-scope="args[0]">
             {{ scope.name }}
+        </ng-template>
+    </k-table-column>
+    <k-table-column key="age" title="Age">
+        <ng-template #template let-scope="args[0]">
+            {{ scope.age }}
+        </ng-template>
+    </k-table-column>
+    <k-table-column key="city" title="City">
+        <ng-template #template>
+            {{ city }}
         </ng-template>
     </k-table-column>
 </k-table>
