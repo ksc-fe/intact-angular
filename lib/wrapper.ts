@@ -29,9 +29,8 @@ export class Wrapper {
         // How to destory angular element?
         const dom = lastVNode.dom;
         if (!parentDom) {
-            parentDom = dom.parentElement;
+            dom.parentElement.removeChild(dom);
         }
-        parentDom.removeChild(dom);
     }
 
     _handleProps(vNode) {
