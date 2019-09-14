@@ -125,7 +125,6 @@ class DefaultDomRenderer2 implements Renderer2 {
             // will result in undefined, so we just return the namespace here.
             return document.createElementNS(NAMESPACE_URIS[namespace] || namespace, name);
         } else if (name.substring(0, 2) === 'k-') {
-            console.log('createElement', name);
             const el: any = document.createComment('intact-node');
             el._intactNode = new IntactNode(name);
             return el;
@@ -140,8 +139,6 @@ class DefaultDomRenderer2 implements Renderer2 {
 
     appendChild(parent: any, newChild: any): void {
         if (parent._intactNode) {
-            console.log('appendChild parent: ', parent._intactNode.type, 'child: ', newChild);
-
             const children = parent._intactNode.children;
             const lastNode = children[children.length - 1]; 
             parent._intactNode.children.push(newChild);
@@ -160,8 +157,6 @@ class DefaultDomRenderer2 implements Renderer2 {
     insertBefore(parent: any, newChild: any, refChild: any): void {
         if (parent) {
             if (parent._intactNode) {
-                console.log('insertBefore parent: ', parent._intactNode.type, 'child: ', newChild, 'refChild: ', refChild);
-
                 const name = parent._block;
                 // it is appending child
                 if (!refChild) {
@@ -187,8 +182,6 @@ class DefaultDomRenderer2 implements Renderer2 {
     removeChild(parent: any, oldChild: any): void {
         if (parent) {
             if (parent._intactNode) {
-                console.log('removeChild parent: ', parent._intactNode.type, 'child: ', oldChild);
-
                 const children = parent._intactNode.children;
                 const index = children.indexOf(oldChild); 
                 children.splice(index, 1);

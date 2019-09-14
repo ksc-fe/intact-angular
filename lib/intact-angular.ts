@@ -62,8 +62,6 @@ export class IntactAngular extends Intact {
     }
 
     ngAfterViewInit() {
-        console.log('ngAfterViewInit', this);
-
         const parent = this.__parent__ =  this._findParentIntactComponent();
 
         this._initAppendQueue();
@@ -97,7 +95,6 @@ export class IntactAngular extends Intact {
     ngAfterViewChecked() {
         // we can not ignore the first checked, because it may update block
         if (this.cancelAppendedQueue || !this.vNode.dom) return;
-        console.log('ngAfterViewChecked', this);
 
         this._initAppendQueue();
 
@@ -119,7 +116,6 @@ export class IntactAngular extends Intact {
 
 
     ngOnDestroy() {
-        console.log('ngOnDestroy', this);
         if (this.cancelAppendedQueue) return;
 
         (<any>this).destroy();
