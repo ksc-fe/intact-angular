@@ -534,24 +534,39 @@ describe('Unit Tests', () => {
 
     it('should update children\'s props when Intact component has changed them', () => {
         const onClick = jasmine.createSpy();
+        // const onClick = function() { console.log('click') }
+        const {clone} = (<any>Intact).Vdt.miss;
         const TestComponent = createIntactAngularComponent(
             `<div>{self.get('children')}</div>`,
             `k-test`,
             {
                 _init() {
-                    // this._changeProps();
-                    // this.on('$change:children', this._changeProps);
+                    this.on('$receive:children', this._changeProps);
                 },
 
                 _changeProps() {
-                    const children = this.get('children.0');
-                    children.props['ev-click'] = onClick.bind(this);
-                    children.props.className = children.className + ' test';
+                    const children = clone(this.get('children.0'));
+                    const props = {...children.props};
+                    props['ev-click'] = onClick.bind(this);
+                    props.className = children.className + ' test';
+                    children.props = props;
+                    this.set('children.0', children, {silent: true});
                 },
 
-                _removeProps() {
-                    const children = this.get('children.0');
-                    children.props.className = '';
+                _removeClass() {
+                    const children = clone(this.get('children.0'));
+                    const props = {...children.props};
+                    props.className = '';
+                    children.props = props;
+                    this.set('children.0', children, {silent: true});
+                },
+
+                _removeEvent() {
+                    const children = clone(this.get('children.0'));
+                    const props = {...children.props};
+                    props['ev-click'] = null;
+                    children.props = props;
+                    this.set('children.0', children, {silent: true});
                 }
             }
         );
@@ -560,9 +575,73 @@ describe('Unit Tests', () => {
             template: `<k-test #test><div class="a" [ngClass]="{b: true}">click</div></k-test>`
         })
         class AppComponent {
-            // @ViewChild('test', {static: true, read: TestComponent}) test;
+            @ViewChild('test', {static: true, read: TestComponent}) test;
         }
 
-        const fixture = getFixture([AppComponent, TestComponent]);
+        const fixture = getFixture<AppComponent>([AppComponent, TestComponent]);
+        const element = fixture.nativeElement;
+
+        const div = element.firstChild.firstChild;
+        expect(div.className).toBe('a b test');
+
+        div.click();
+        expect(onClick.calls.count()).toEqual(1);
+
+        const component = fixture.componentInstance;
+        component.test._removeClass();
+        component.test.update();
+        expect(div.className).toBe('');
+
+        div.click();
+        expect(onClick.calls.count()).toEqual(2);
+
+        component.test._removeEvent();
+        component.test.update();
+        div.click();
+        expect(onClick.calls.count()).toEqual(2);
+    });
+
+    it('should destroy Angular component', () => {
+        const TestComponent = createIntactAngularComponent(
+            `<div v-if={!self.get('hidden')}>{self.get('children')}</div>`,
+            `k-test`
+        );
+        @Component({
+            selector: 'app-test',
+            template: `<div>test</div>`,
+        })
+        class AppTestComponent {
+            ngOnInit() {
+                console.log('ngOnInit');
+            }
+            ngOnDestroy() {
+                console.log('destroy');
+            }
+        } 
+        @Component({
+            selector: 'app-root',
+            template: `<k-test [hidden]="hidden"><app-test></app-test></k-test>`
+        })
+        class AppComponent {
+            hidden = false;
+            hide() {
+                this.hidden = true;
+            }
+            show() {
+                this.hidden = false;
+            }
+        }
+
+        const fixture = getFixture<AppComponent>([AppComponent, AppTestComponent, TestComponent]);
+        const component = fixture.componentInstance;
+        const element = fixture.nativeElement;
+
+        component.hide();
+        fixture.detectChanges();
+        expect(element.innerHTML).toBe('');
+        
+        component.show();
+        fixture.detectChanges();
+        expect(element.innerHTML).toBe('<div><app-test><div>test</div></app-test></div>');
     });
 });

@@ -20,7 +20,7 @@ export class IntactAngular extends Intact {
     public parentVNode;
     public cancelAppendedQueue: boolean = false;
 
-    private _blockConstructor: boolean = true;
+    private _allowConstructor: boolean = false;
     private _placeholder;
     private __blocks__;
     private __parent__;
@@ -28,6 +28,7 @@ export class IntactAngular extends Intact {
     private mountedQueue;
     private _shouldTrigger;
     private __oldTriggerFlag;
+    private _shouldUpdateProps = false;
 
     constructor(
         private elRef: ElementRef,
@@ -42,14 +43,22 @@ export class IntactAngular extends Intact {
             this._initVNode();
         } else {
             // is called in Intact
-            this._blockConstructor = false;
+            this._allowConstructor = true;
             this._constructor(elRef);
         }
     }
 
     _constructor(props) {
-        if (this._blockConstructor) return;
+        if (!this._allowConstructor) return;
         super._constructor(props);
+    }
+
+    init(lastVNode, nextVNode) {
+        if (this._shouldUpdateProps && nextVNode) {
+            const props = nextVNode.props;
+            Object.assign(this.props, props);
+        }
+        return super.init(lastVNode, nextVNode);
     }
 
     ngAfterViewInit() {
@@ -61,7 +70,7 @@ export class IntactAngular extends Intact {
 
         const placeholder = this._placeholder = this.elRef.nativeElement;
         this._normalizeBlocks();
-        this._blockConstructor = false;
+        this._allowConstructor = true;
         const props = this._normalizeProps();
         this._constructor(props);
 
@@ -124,13 +133,24 @@ export class IntactAngular extends Intact {
             const node = (<any>dom)._intactNode;
             if (node) {
                 node.instance.cancelAppendedQueue = true;
-                const vNode = h(node.instance, null, null, null, dom);
+                const vNode = h(node.instance, null, null, null, dom /* use dom as key */);
+                // because we may change props in Intact component
+                // we set this flag to update props in `init` method
+                node.instance._shouldUpdateProps = true;
                 vNode.props = node.instance.vNode.props;
                 return vNode;
             }
             // angular can insert dom, so we must keep the key consistent
             // we use the dom as key
-            return h(Wrapper, {dom}, null, null, dom);
+            // 
+            // we must get the className of the dom
+            // because it is useful for Intact component to modify it
+            // <intact-content> has not _classNames
+            let className = (<any>dom)._classNames;
+            if (className) {
+                className = Array.from(className).join(' ') || undefined;
+            }
+            return h(Wrapper, {dom}, null, className, dom);
         });
 
         // normalize className

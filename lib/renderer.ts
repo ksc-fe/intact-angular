@@ -150,6 +150,8 @@ class DefaultDomRenderer2 implements Renderer2 {
             if (lastNode) {
                 lastNode._nextSibling = newChild;
             }
+            // for save original className
+            newChild._classNames = new Set();
         } else {
             parent.appendChild(newChild); 
         }
@@ -264,6 +266,9 @@ class DefaultDomRenderer2 implements Renderer2 {
             el._intactNode.addClass(name);
         } else {
             el.classList.add(name); 
+            if (el._classNames) {
+                el._classNames.add(name);
+            }
         }
     }
 
@@ -272,6 +277,9 @@ class DefaultDomRenderer2 implements Renderer2 {
             el._intactNode.removeClass(name);
         } else {
             el.classList.remove(name); 
+            if (el._classNames) {
+                el._classNames.delete(name);
+            }
         }
     }
 

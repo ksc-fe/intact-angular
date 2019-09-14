@@ -1,10 +1,58 @@
+import Intact from 'intact/dist/index';
+
+const {patch, clone, Types} = Intact.Vdt.miss;
+const emptyObject = Object.create(null);
+
 export class Wrapper {
     init(lastVNode, nextVNode) {
-        return nextVNode.props.dom;
+        const dom = nextVNode.props.dom;
+
+        nextVNode = this._handleProps(nextVNode);
+        lastVNode = clone(nextVNode);
+        lastVNode.props = emptyObject; 
+        lastVNode.dom = dom;
+        lastVNode.className = undefined;
+        patch(lastVNode, nextVNode);
+
+        return dom;
     }
 
     update(lastVNode, nextVNode) {
-        return nextVNode.props.dom;
+        lastVNode = this._handleProps(lastVNode);
+        nextVNode = this._handleProps(nextVNode);
+        patch(lastVNode, nextVNode);
+
+        return nextVNode.dom;
+    }
+
+    destroy(lastVNode, nextVNode, parentDom) {
+        // How to destory angular element?
+        const dom = lastVNode.dom;
+        if (!parentDom) {
+            parentDom = dom.parentElement;
+        }
+        parentDom.removeChild(dom);
+    }
+
+    _handleProps(vNode) {
+        vNode = clone(vNode);
+        const props = {...vNode.props};
+        const dom = props.dom;
+        delete props.dom;
+        vNode.props = props;
+        vNode.children = null;
+        if ('className' in props) {
+            vNode.className = props.className;
+            delete props.className;
+        }
+        if ('key' in props) {
+            vNode.key = props.key;
+            delete props.key;
+        }
+        vNode.type = Types.HtmlElement;
+        vNode.dom = dom;
+
+        return vNode;
     }
 }
 
