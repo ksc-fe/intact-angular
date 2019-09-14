@@ -11,6 +11,11 @@
   },
   "private": true,
   "main": "dist/index.js",
+  "files": [
+    "dist",
+    "lib",
+    "index.ts"
+  ],
   "peerDependencies": {
     "intact": "^2.5.0",
     "@angular/core": "^8.2.3"
