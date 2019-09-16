@@ -1,4 +1,5 @@
 import { Component, ContentChild, TemplateRef } from '@angular/core';
+import { functionalWrapper } from './functional';
 export var componentTemplate = "<ng-content></ng-content>";
 export var BLOCK_NAME_PREFIX = '__block__';
 // initialize the decorator of TemplateRef
@@ -14,10 +15,14 @@ export function decorateComponent(IntactComponent, selector) {
     Component({ selector: selector, template: componentTemplate })(IntactComponent);
     return IntactComponent;
 }
-export function decorate(IntactComponent, selector, blocks) {
+export function decorate(IntactComponent, selector) {
+    if (!IntactComponent.decorate) {
+        // is a functional component
+        return functionalWrapper(IntactComponent, selector);
+    }
     decorateComponent(IntactComponent, selector);
-    if (blocks) {
-        decorateBlocks(IntactComponent, blocks);
+    if (IntactComponent.blocks) {
+        decorateBlocks(IntactComponent, IntactComponent.blocks);
     }
     return IntactComponent;
 }

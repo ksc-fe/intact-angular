@@ -1,5 +1,5 @@
 import {IntactAngular} from './lib/intact-angular';
 export * from './lib/module';
-export * from './lib/functional';
+export {decorate} from './lib/decorate';
 
 export default IntactAngular;

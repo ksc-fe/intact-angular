@@ -318,9 +318,11 @@ describe('Unit Tests', () => {
     it('should render blocks in Intact functional component', () => {
         const {h} = (<any>Intact).Vdt.miss;
         const Component = createIntactComponent(`<div><b:test /></div>`);
-        const FunctionalComponent = functionalWrapper(function(props) {
+        const functional = function(props) {
             return h(Component, props);
-        }, 'k-functional', ['test']);
+        };
+        functional.blocks = ['test'];
+        const FunctionalComponent = Intact.decorate(functional, 'k-functional');
         const AppComponent = createAppComponent(
             `<k-functional>
                 <ng-template #test>

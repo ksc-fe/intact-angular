@@ -10,7 +10,7 @@ configure({useWrapper: true});
 Intact.decorate(Button, 'k-button');
 Intact.decorate(ButtonGroup, 'k-button-group');
 Intact.decorate(Table, 'k-table');
-Intact.decorate(TableColumn, 'k-table-column', ['template']);
+Intact.decorate(TableColumn, 'k-table-column');
 Intact.decorate(DropdownMenu, 'k-dropdown-menu');
 Intact.decorate(DropdownItem, 'k-dropdown-item');
 const DropdownWrapper = functionalWrapper(Dropdown, 'k-dropdown');

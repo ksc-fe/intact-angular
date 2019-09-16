@@ -30,9 +30,10 @@ export function createAngularComponent(template, selector) {
 
 export function createIntactAngularComponent(template, selector, methods?, blocks?) {
     const IntactComponent = createIntactComponent(template, methods);
+    (<any>IntactComponent).blocks = blocks;
     (<any>IntactComponent).displayName = selector;
 
-    return Intact.decorate(IntactComponent, selector, blocks);
+    return Intact.decorate(IntactComponent, selector);
 }
 
 export function getFixture<T>(components: Array<any>): ComponentFixture<T> {
