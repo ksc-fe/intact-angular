@@ -9,13 +9,16 @@ var IntactNode = /** @class */ (function () {
     }
     IntactNode.prototype.setProperty = function (name, value) {
         // class has handled in addClass method
-        if (name === 'class')
-            return;
-        if (name === 'style') {
+        if (name === 'class') {
+            this.addClass(value);
+        }
+        else if (name === 'style') {
             this.initStyle();
             this.style.setAttribute('style', value);
         }
-        this.props[name] = value;
+        else {
+            this.props[name] = value;
+        }
     };
     IntactNode.prototype.removeProperty = function (name) {
         delete this.props[name];

@@ -12,12 +12,14 @@ export class IntactNode {
 
     setProperty(name: string, value: any) {
         // class has handled in addClass method
-        if (name === 'class') return;
-        if (name === 'style') {
+        if (name === 'class') {
+            this.addClass(value);
+        } else if (name === 'style') {
             this.initStyle();
             this.style.setAttribute('style', value);
+        } else {
+            this.props[name] = value;
         }
-        this.props[name] = value;
     }
 
     removeProperty(name) {

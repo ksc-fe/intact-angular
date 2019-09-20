@@ -309,9 +309,18 @@ var DefaultDomRenderer2 = /** @class */ (function () {
             return this.eventManager.addGlobalEventListener(target, event, decoratePreventDefault(callback));
         }
         else if (target._intactNode) {
-            // change event name, which like `valueChange` for two way binding, to `$change:value`
+            var shouldRewrite = false;
             if (event.slice(-6) === 'Change') {
+                // change event name, which like `valueChange` for two way binding, to `$change:value`
                 event = "$change:" + event.slice(0, -6);
+                shouldRewrite = true;
+            }
+            else if (event[0] === '$') {
+                // change $change-value to $change:value
+                event = event.replace(/\-/, ':');
+                shouldRewrite = true;
+            }
+            if (shouldRewrite) {
                 var _cb_1 = callback;
                 callback = function (c, v) {
                     return _cb_1(v);

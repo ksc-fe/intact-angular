@@ -100,6 +100,46 @@ describe('Unit Tests', () => {
         expect(element.innerHTML).toBe("<div><app-component><div>test</div></app-component></div>");
     });
 
+    it('should render cloned child', () => {
+        const ChildrenComponent = createIntactAngularComponent(
+            `<div>{self.get('children')}{self.get('children').map(vNode => {
+                debugger;
+                return _Vdt.miss.clone(vNode);
+            })}</div>`,
+            `k-children`
+        );
+        const ChildComponent = createIntactAngularComponent(
+            `<div><b:template /></div>`,
+            `k-child`,
+            null,
+            ['template']
+        );
+
+        @Component({
+            selector: 'app-root',
+            template: `<k-children>
+                <k-child>
+                    <ng-template #template>
+                        <span *ngIf="show">show</span>
+                        <b>hidden</b>
+                    </ng-template>
+                </k-child>
+            </k-children>`,
+        })
+        class AppComponent {
+            show = true;
+        }
+
+        const fixture = getFixture<AppComponent>([AppComponent, ChildrenComponent, ChildComponent]) ;
+        const element = fixture.nativeElement;
+        expect(element.innerHTML).toBe('<div><div><intact-content><span>show</span><b>hidden</b></intact-content></div><div><intact-content><span>show</span><b>hidden</b></intact-content></div></div>');
+
+        const component = fixture.componentInstance;
+        component.show = false;
+        fixture.detectChanges();
+        expect(element.innerHTML).toBe("<div><div><intact-content><b>hidden</b></intact-content></div><div><intact-content><b>hidden</b></intact-content></div></div>");
+    });
+
     it('should update children', () => {
         @Component({
             selector: 'app-root',
@@ -214,6 +254,30 @@ describe('Unit Tests', () => {
         expect(onClick).toHaveBeenCalled();
         expect(onClick.calls.count()).toEqual(1);
         expect(onClick).toHaveBeenCalledWith('test')
+    });
+
+    it('should bind $change event', () => {
+        const onClick = jasmine.createSpy();
+        const TestComponent = createIntactAngularComponent(
+            `<div ev-click={self.onClick}>click</div>`,
+            `k-test`,
+            {onClick: function() {
+                this.set('count', this.get('count', 0) + 1);
+            }}
+        );
+        @Component({
+            selector: 'app-root',
+            template: `<k-test ($change-count)="onClick($event)"></k-test>`,
+        })
+        class AppComponent {
+            onClick = onClick; 
+        }
+
+        const element = getFixture([AppComponent, TestComponent]).nativeElement;
+        element.firstChild.click();
+        expect(onClick).toHaveBeenCalled();
+        expect(onClick.calls.count()).toEqual(1);
+        expect(onClick).toHaveBeenCalledWith(1);
     });
 
     it('should render basic blocks', () => {
@@ -345,12 +409,13 @@ describe('Unit Tests', () => {
             `<k-test 
                 class="a" [ngClass]="{b: true, c: false}" [class.d]="true"
                 style="color: red;" [ngStyle]="{'font-size': '12px'}" [style.display]="'block'"
-            ></k-test>`
+            ></k-test>
+            <k-test class="a" style="color: red;"></k-test>`
         );
 
         const fixture = getFixture([AppComponent, TestComponent]);
         const element = fixture.nativeElement;
-        expect(element.innerHTML).toBe('<div class="a b d" style="color: red; font-size: 12px; display: block;">test</div>');
+        expect(element.innerHTML).toBe('<div class="a b d" style="color: red; font-size: 12px; display: block;">test</div><div class="a" style="color: red;">test</div>');
     });
 
     it('should get parentVNode of nested Intact component', () => {

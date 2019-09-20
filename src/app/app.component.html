@@ -1,7 +1,7 @@
 <app-hello [(counter)]="counter">
 </app-hello>
 <k-button-group checkType="radio" [(value)]="city">
-    <k-button value="beijing" size="small">北京</k-button>
+    <k-button value="beijing" size="small" disabled>北京</k-button>
     <k-button value="shanghai" size="small">上海</k-button>
 </k-button-group>
 <k-table [data]="[{name: 'Javey', age: 18}, {name: 'Jiawei', age: 28}]">
@@ -30,3 +30,4 @@
         <k-dropdown-item>Option 4</k-dropdown-item>
     </k-dropdown-menu>
 </k-dropdown>
+<div #ref (click)="onClick()">test</div>
