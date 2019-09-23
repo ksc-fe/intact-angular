@@ -85,9 +85,13 @@ var IntactAngular = /** @class */ (function (_super) {
         this._pushUpdateParentVNodeCallback();
         this._triggerAppendQueue();
     };
-    IntactAngular.prototype.ngOnDestroy = function () {
-        if (this.cancelAppendedQueue)
+    IntactAngular.prototype.destroy = function (lastVNode, nextVNode, parentDom) {
+        if (lastVNode)
             return;
+        _super.prototype.destroy.call(this, lastVNode, nextVNode, parentDom);
+    };
+    IntactAngular.prototype.ngOnDestroy = function () {
+        // if (this.cancelAppendedQueue) return;
         this.destroy();
     };
     IntactAngular.prototype._normalizeProps = function () {

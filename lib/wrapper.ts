@@ -27,6 +27,7 @@ export class Wrapper {
 
     destroy(lastVNode, nextVNode, parentDom) {
         // How to destory angular element?
+        debugger;
         const dom = lastVNode.dom;
         if (!parentDom) {
             dom.parentElement.removeChild(dom);

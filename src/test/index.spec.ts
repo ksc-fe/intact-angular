@@ -631,6 +631,7 @@ describe('Unit Tests', () => {
         const mount = jasmine.createSpy();
         const update = jasmine.createSpy();
         const destroy = jasmine.createSpy();
+        let html = '<div><app-angular ng-reflect-a="1"><div>1</div></app-angular><div>1</div></div>';
         const IntactComponent = createIntactAngularComponent(
             `<div>{self.get('children')}</div>`,
             `k-children`,
@@ -638,7 +639,7 @@ describe('Unit Tests', () => {
                 _beforeCreate: beforeCreate,
                 _mount() {
                     expect(this.element.parentNode.tagName).toBe('DIV');
-                    expect(this.element.outerHTML).toBe('<div><app-angular ng-reflect-a="1"><div>1</div></app-angular><div>1</div></div>');
+                    expect(this.element.outerHTML).toBe(html);
                     mount();
                 },
                 _update: update,
@@ -712,6 +713,46 @@ describe('Unit Tests', () => {
         expect(mount.calls.count()).toEqual(1);
         expect(update.calls.count()).toEqual(3);
         expect(destroy.calls.count()).toEqual(1);
+
+        // destroy one more time
+        component.show = true;
+        html = '<div><app-angular ng-reflect-a="3"><div>3</div></app-angular><div>3</div></div>';
+        fixture.detectChanges();
+        component.show = false;
+        fixture.detectChanges();
+    });
+
+    it('should destroy component in Intact component\'s tempalte correctly', () => {
+        const TestComponent = createIntactAngularComponent(
+            `<div>{!self.get('hide') ? self.get('children') : undefined}</div>`,
+            `k-test`
+        );
+        const destroy = jasmine.createSpy();
+        const ChildComponent = createIntactAngularComponent(
+            `<div>test</div>`,
+            `k-child`,
+            {
+                _destroy: destroy,
+            }
+        );
+        const AppComponent = createAppComponent(
+            `<k-test [hide]="hide" *ngIf="!remove"><k-child></k-child></k-test>`
+        );
+
+        const fixture = getFixture([AppComponent, ChildComponent, TestComponent]);
+        const component = fixture.componentInstance;
+        (<any>component).hide = true;
+        fixture.detectChanges();
+        (<any>component).hide = false;
+        fixture.detectChanges();
+        (<any>component).hide = true;
+        fixture.detectChanges();
+        expect(destroy.calls.count()).toBe(0);
+
+        // remove really
+        (<any>component).remove = true;
+        fixture.detectChanges();
+        expect(destroy.calls.count()).toBe(1);
     });
 
     it('should update children\'s props when Intact component has changed them', () => {

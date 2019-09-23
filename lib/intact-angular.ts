@@ -116,9 +116,13 @@ export class IntactAngular extends Intact {
         this._triggerAppendQueue();
     }
 
+    destroy(lastVNode, nextVNode, parentDom) {
+        if (lastVNode) return;
+        super.destroy(lastVNode, nextVNode, parentDom);
+    }
 
     ngOnDestroy() {
-        if (this.cancelAppendedQueue) return;
+        // if (this.cancelAppendedQueue) return;
 
         (<any>this).destroy();
     }

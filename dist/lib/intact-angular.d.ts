@@ -24,6 +24,7 @@ export declare class IntactAngular extends Intact {
     init(lastVNode: any, nextVNode: any): any;
     ngAfterViewInit(): void;
     ngAfterViewChecked(): void;
+    destroy(lastVNode: any, nextVNode: any, parentDom: any): void;
     ngOnDestroy(): void;
     _normalizeProps(): {
         children: any[];
