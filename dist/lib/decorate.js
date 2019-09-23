@@ -6,6 +6,7 @@ export var BLOCK_NAME_PREFIX = '__block__';
 // @ContentChild('ref', {static: false, read: TemplateRef}) ref: TemplateRef<any>;
 export function decorateBlocks(IntactComponent, blocks) {
     blocks.forEach(function (name) {
+        name = name.replace(/-/g, '_');
         var decorate = ContentChild(name, { static: false, read: TemplateRef });
         decorate(IntactComponent.prototype, BLOCK_NAME_PREFIX + name);
     });

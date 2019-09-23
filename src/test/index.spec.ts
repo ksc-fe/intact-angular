@@ -103,7 +103,6 @@ describe('Unit Tests', () => {
     it('should render cloned child', () => {
         const ChildrenComponent = createIntactAngularComponent(
             `<div>{self.get('children')}{self.get('children').map(vNode => {
-                debugger;
                 return _Vdt.miss.clone(vNode);
             })}</div>`,
             `k-children`
@@ -160,6 +159,33 @@ describe('Unit Tests', () => {
         component.show = false;
         fixture.detectChanges();
         expect(element.innerHTML).toBe('<div><b>hidden</b></div>');
+    });
+
+    it('should update children which are nested Intact component', () => {
+        @Component({
+            selector: 'app-root',
+            template: `<k-children>
+                <k-children>
+                    <span *ngIf="show">show</span>
+                    <b>hidden</b>
+                </k-children>
+            </k-children>`,
+        })
+        class AppComponent {
+            show = true;
+        }
+
+        const fixture = getFixture<AppComponent>([AppComponent, IntactChildrenComponent]) ;
+        const element = fixture.nativeElement;
+        const component = fixture.componentInstance;
+        expect(element.innerHTML).toBe("<div><div><span>show</span><b>hidden</b></div></div>");
+
+        component.show = false;
+        fixture.detectChanges();
+        expect(element.innerHTML).toBe("<div><div><b>hidden</b></div></div>");
+
+        component.show = true;
+        fixture.detectChanges();
     });
 
     it('should remove component', () => {
@@ -286,10 +312,11 @@ describe('Unit Tests', () => {
                 <b:prefix>prefix</b:prefix>
                 {self.get('children')}
                 <div><b:suffix/></div>
+                <b:a-b>a-b</b:a-b>
             </div>`,
             `k-test`,
             null,
-            ['prefix', 'suffix']
+            ['prefix', 'suffix', 'a-b']
         );
 
         @Component({
@@ -301,6 +328,7 @@ describe('Unit Tests', () => {
                     <span *ngIf="show">end</span>
                     <b>!</b>
                 </ng-template>
+                <ng-template #a_b></ng-template>
             </k-test>`
         })
         class AppComponent {
@@ -310,15 +338,15 @@ describe('Unit Tests', () => {
         const fixture = getFixture<AppComponent>([AppComponent, TestComponent]);
         const element = fixture.nativeElement;
         const component = fixture.componentInstance;
-        expect(element.innerHTML).toBe('<div><intact-content>begin</intact-content><div>children</div><div><intact-content><span>end</span><b>!</b></intact-content></div></div>');
+        expect(element.innerHTML).toBe('<div><intact-content>begin</intact-content><div>children</div><div><intact-content><span>end</span><b>!</b></intact-content></div><intact-content></intact-content></div>');
 
         component.show = false;
         fixture.detectChanges();
-        expect(element.innerHTML).toBe('<div><intact-content>begin</intact-content><div>children</div><div><intact-content><b>!</b></intact-content></div></div>');
+        expect(element.innerHTML).toBe('<div><intact-content>begin</intact-content><div>children</div><div><intact-content><b>!</b></intact-content></div><intact-content></intact-content></div>');
 
         component.show = true;
         fixture.detectChanges();
-        expect(element.innerHTML).toBe('<div><intact-content>begin</intact-content><div>children</div><div><intact-content><span>end</span><b>!</b></intact-content></div></div>');
+        expect(element.innerHTML).toBe('<div><intact-content>begin</intact-content><div>children</div><div><intact-content><span>end</span><b>!</b></intact-content></div><intact-content></intact-content></div>');
     });
 
     it('should render scope blocks', () => {
@@ -398,6 +426,37 @@ describe('Unit Tests', () => {
         const fixture = getFixture([AppComponent, FunctionalComponent]);
         const element = fixture.nativeElement;
         expect(element.innerHTML).toBe('<div><intact-content><span>test</span></intact-content></div>');
+    });
+
+    it('should get contenxt in Intact functional component', () => {
+        const {h} = (<any>Intact).Vdt.miss;
+        const FunctionalComponent = functionalWrapper(function(props) {
+            const data = props._context.data;
+            const number = data.get('number');
+            return h('div', {'ev-click': () => {
+                data.set('number', number + 1);
+            }}, number);
+        }, 'k-functional');
+
+        @Component({
+            selector: 'app-root',
+            template: `
+                <k-functional></k-functional>
+                <div>
+                    <k-functional></k-functional>
+                </div>
+            `,
+        })
+        class AppComponent {
+            number = 1;
+        }
+
+        const fixture = getFixture([AppComponent, FunctionalComponent]);
+        const element = fixture.nativeElement;
+        expect(element.innerHTML).toBe('<div>1</div><div><div>1</div></div>');
+
+        element.firstChild.click();
+        expect(element.innerHTML).toBe('<div>2</div><div><div>2</div></div>');
     });
 
     it('should render class and style', () => {
@@ -488,6 +547,30 @@ describe('Unit Tests', () => {
         const fixture = getFixture([AppComponent, IntactChildrenComponent, SimpleComponent, AngularChildrenComponent]);
     });
 
+    it('should get parentVNode of nested Intact component with ng-container', () => {
+        const SimpleComponent = createIntactAngularComponent(`<div>test</div>`, 'k-simple', {
+            _beforeCreate() {
+                const vNode = this.parentVNode.parentVNode;
+                expect(vNode).not.toBeUndefined();
+                expect(vNode.parentVNode).toBeUndefined();
+                expect(vNode.tag === IntactChildrenComponent).toBe(true);
+                expect(vNode.children instanceof IntactChildrenComponent).toBeTruthy();
+            },
+        });
+        @Component({
+            selector: `app-root`,
+            template: `<k-children id="parent">
+                <ng-container *ngFor="let item of [1, 2]">
+                    <k-simple id="child">test</k-simple>
+                </ng-container>
+            </k-children>`
+        })
+        class AppComponent {
+        }
+
+        const fixture = getFixture([AppComponent, IntactChildrenComponent, SimpleComponent]);
+    });
+
     it('should handle children vNode in Intact template', () => {
         const GroupComponent = createIntactAngularComponent(
             `<ul>
@@ -544,6 +627,7 @@ describe('Unit Tests', () => {
             ngOnDestroy() { ngOnDestroy() }
         }
 
+        const beforeCreate = jasmine.createSpy();
         const mount = jasmine.createSpy();
         const update = jasmine.createSpy();
         const destroy = jasmine.createSpy();
@@ -551,31 +635,56 @@ describe('Unit Tests', () => {
             `<div>{self.get('children')}</div>`,
             `k-children`,
             {
+                _beforeCreate: beforeCreate,
                 _mount() {
                     expect(this.element.parentNode.tagName).toBe('DIV');
-                    expect(this.element.outerHTML).toBe('<div><app-angular ng-reflect-a="1"><div>1</div></app-angular></div>');
+                    expect(this.element.outerHTML).toBe('<div><app-angular ng-reflect-a="1"><div>1</div></app-angular><div>1</div></div>');
                     mount();
                 },
                 _update: update,
                 _destroy: destroy,
             }
-        )
+        );
+
+        const methods = {
+            _beforeCreate: jasmine.createSpy(),
+        };
+        const Wrapper = createIntactComponent(`<div>{self.get('children')}</div>`, methods);
+        const ItemComponent = createIntactAngularComponent(
+            `<Wrapper>{self.get('a')}</Wrapper>`,
+            `k-item`,
+            {
+                _init() {
+                    this.Wrapper = Wrapper;
+                }
+            }
+        );
+
         @Component({
             selector: 'app-root',
-            template: `<k-children *ngIf="show"><app-angular [a]="a"></app-angular></k-children>`,
+            template: `
+                <k-children *ngIf="show">
+                    <app-angular [a]="a"></app-angular>
+                    <k-item [(a)]="a" #ref></k-item>
+                </k-children>
+            `,
         })
         class AppComponent {
             show = true;
             a = 1;
+            @ViewChild('ref', {static: false}) ref;
         }
 
-        const fixture = getFixture<AppComponent>([AppComponent, AngularComponet, IntactComponent]);
+        const fixture = getFixture<AppComponent>([AppComponent, AngularComponet, IntactComponent, ItemComponent]);
         expect(ngOnInit.calls.count()).toEqual(1);
         expect(ngAfterViewChecked.calls.count()).toEqual(1);
         expect(ngOnDestroy.calls.count()).toEqual(0);
+        expect(beforeCreate.calls.count()).toEqual(1);
         expect(mount.calls.count()).toEqual(1);
         expect(update.calls.count()).toEqual(1);
         expect(destroy.calls.count()).toEqual(0);
+        // ItemComponent
+        expect(methods._beforeCreate.calls.count()).toEqual(1);
 
         // update
         const component = fixture.componentInstance;
@@ -584,9 +693,14 @@ describe('Unit Tests', () => {
         expect(ngOnInit.calls.count()).toEqual(1);
         expect(ngAfterViewChecked.calls.count()).toEqual(3);
         expect(ngOnDestroy.calls.count()).toEqual(0);
+        expect(beforeCreate.calls.count()).toEqual(1);
         expect(mount.calls.count()).toEqual(1);
         expect(update.calls.count()).toEqual(3);
         expect(destroy.calls.count()).toEqual(0);
+        // ItemComponent
+        expect(methods._beforeCreate.calls.count()).toEqual(1);
+        component.ref.set('a', 3);
+        expect(methods._beforeCreate.calls.count()).toEqual(1);
 
         // destroy
         component.show = false;
@@ -594,6 +708,7 @@ describe('Unit Tests', () => {
         expect(ngOnInit.calls.count()).toEqual(1);
         expect(ngAfterViewChecked.calls.count()).toEqual(3);
         expect(ngOnDestroy.calls.count()).toEqual(1);
+        expect(beforeCreate.calls.count()).toEqual(1);
         expect(mount.calls.count()).toEqual(1);
         expect(update.calls.count()).toEqual(3);
         expect(destroy.calls.count()).toEqual(1);

@@ -28,6 +28,18 @@ export declare class IntactAngular extends Intact {
     _normalizeProps(): {
         children: any[];
         _blocks: any;
+        _context: {
+            data: {
+                get(name: any): any;
+                set(key: any, value: any): void;
+            };
+        };
+    };
+    _normalizeContext(): {
+        data: {
+            get(name: any): any;
+            set(key: any, value: any): void;
+        };
     };
     _normalizeBlocks(): void;
     _findParentIntactComponent(): IntactAngular;

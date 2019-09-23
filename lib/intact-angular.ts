@@ -10,6 +10,7 @@ import {decorate, BLOCK_NAME_PREFIX} from './decorate';
 
 const {h} = Intact.Vdt.miss;
 const {className: intactClassName} = Intact.Vdt.utils;
+const {get, set} = Intact.utils;
 
 @Component({})
 export class IntactAngular extends Intact {
@@ -94,7 +95,8 @@ export class IntactAngular extends Intact {
 
     ngAfterViewChecked() {
         // we can not ignore the first checked, because it may update block
-        if (this.cancelAppendedQueue || !this.vNode.dom) return;
+        // if (this.cancelAppendedQueue || !this.vNode.dom) return;
+        if (!this.vNode.dom) return;
 
         this._initAppendQueue();
 
@@ -103,10 +105,10 @@ export class IntactAngular extends Intact {
         this._normalizeProps();
 
         this._appendQueue.push(() => {
+            if (this.cancelAppendedQueue) return;
+
             this.__initMountedQueue();
-
             (<any>this).update(lastVNode, this.vNode);
-
             this.__triggerMountedQueue();
         });
         this._pushUpdateParentVNodeCallback();
@@ -158,11 +160,34 @@ export class IntactAngular extends Intact {
             (<any>intactNode.props).style = intactNode.style.style.cssText;
         }
 
-        const props = {...intactNode.props, children, _blocks: this.__blocks__};
+        const props = {
+            ...intactNode.props,
+            children, 
+            _blocks: this.__blocks__,
+            _context: this._normalizeContext(),
+        };
 
         this.vNode.props = props;
 
         return props;
+    }
+
+    _normalizeContext() {
+        const context = (<any>this.viewContainerRef)._view.context;
+        return {
+            data: {
+                get(name) {
+                    if (name !== null) {
+                        return get(context, name); 
+                    } else {
+                        return context;
+                    }
+                },
+                set(key, value) {
+                    set(context, key, value);
+                }
+            }
+        }
     }
 
     _normalizeBlocks() {
@@ -174,7 +199,7 @@ export class IntactAngular extends Intact {
             const ref = this[name];
             if (!ref) continue;
 
-            name = name.substring(BLOCK_NAME_PREFIX.length);
+            name = name.substring(BLOCK_NAME_PREFIX.length).replace(/_/g, '-');
             _blocks[name] = (__nouse__, ...args) => {
                 return h(BlockWrapper, {
                     templateRef: ref, 
@@ -201,7 +226,7 @@ export class IntactAngular extends Intact {
                         }
                     }
                     elDef = elDef.parent;
-                    if (!elDef) return;
+                    if (!elDef) break;
                 }
             }
             elDef = searchView.parent ? searchView.parentNodeDef.parent : null;
@@ -210,7 +235,11 @@ export class IntactAngular extends Intact {
     }
 
     _initVNode() {
+        const oldVNode = this.vNode; 
         this.vNode = h(this.constructor);
+        if (oldVNode) {
+            this.vNode.key = oldVNode.key;
+        }
         this.vNode.children = this;
     }
 

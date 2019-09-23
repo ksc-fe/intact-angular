@@ -5,6 +5,7 @@ import { Wrapper, BlockWrapper } from './wrapper';
 import { decorate, BLOCK_NAME_PREFIX } from './decorate';
 var h = Intact.Vdt.miss.h;
 var intactClassName = Intact.Vdt.utils.className;
+var _a = Intact.utils, get = _a.get, set = _a.set;
 var IntactAngular = /** @class */ (function (_super) {
     tslib_1.__extends(IntactAngular, _super);
     function IntactAngular(elRef, viewContainerRef, injector) {
@@ -67,13 +68,16 @@ var IntactAngular = /** @class */ (function (_super) {
     IntactAngular.prototype.ngAfterViewChecked = function () {
         var _this = this;
         // we can not ignore the first checked, because it may update block
-        if (this.cancelAppendedQueue || !this.vNode.dom)
+        // if (this.cancelAppendedQueue || !this.vNode.dom) return;
+        if (!this.vNode.dom)
             return;
         this._initAppendQueue();
         var lastVNode = this.vNode;
         this._initVNode();
         this._normalizeProps();
         this._appendQueue.push(function () {
+            if (_this.cancelAppendedQueue)
+                return;
             _this.__initMountedQueue();
             _this.update(lastVNode, _this.vNode);
             _this.__triggerMountedQueue();
@@ -121,9 +125,27 @@ var IntactAngular = /** @class */ (function (_super) {
         if (intactNode.style) {
             intactNode.props.style = intactNode.style.style.cssText;
         }
-        var props = tslib_1.__assign({}, intactNode.props, { children: children, _blocks: this.__blocks__ });
+        var props = tslib_1.__assign({}, intactNode.props, { children: children, _blocks: this.__blocks__, _context: this._normalizeContext() });
         this.vNode.props = props;
         return props;
+    };
+    IntactAngular.prototype._normalizeContext = function () {
+        var context = this.viewContainerRef._view.context;
+        return {
+            data: {
+                get: function (name) {
+                    if (name !== null) {
+                        return get(context, name);
+                    }
+                    else {
+                        return context;
+                    }
+                },
+                set: function (key, value) {
+                    set(context, key, value);
+                }
+            }
+        };
     };
     IntactAngular.prototype._normalizeBlocks = function () {
         var blocks = this.constructor.__prop__metadata__;
@@ -134,7 +156,7 @@ var IntactAngular = /** @class */ (function (_super) {
             var ref = this_1[name_1];
             if (!ref)
                 return "continue";
-            name_1 = name_1.substring(BLOCK_NAME_PREFIX.length);
+            name_1 = name_1.substring(BLOCK_NAME_PREFIX.length).replace(/_/g, '-');
             _blocks[name_1] = function (__nouse__) {
                 var args = [];
                 for (var _i = 1; _i < arguments.length; _i++) {
@@ -169,7 +191,7 @@ var IntactAngular = /** @class */ (function (_super) {
                     }
                     elDef = elDef.parent;
                     if (!elDef)
-                        return;
+                        break;
                 }
             }
             elDef = searchView.parent ? searchView.parentNodeDef.parent : null;
@@ -177,7 +199,11 @@ var IntactAngular = /** @class */ (function (_super) {
         }
     };
     IntactAngular.prototype._initVNode = function () {
+        var oldVNode = this.vNode;
         this.vNode = h(this.constructor);
+        if (oldVNode) {
+            this.vNode.key = oldVNode.key;
+        }
         this.vNode.children = this;
     };
     IntactAngular.prototype._initAppendQueue = function () {
