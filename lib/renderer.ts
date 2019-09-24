@@ -331,7 +331,7 @@ class DefaultDomRenderer2 implements Renderer2 {
                 event = `$change:` + event.slice(0, -6);
                 const _cb = callback;
                 callback = function(c, v) {
-                    return _cb(v);
+                    this.ngZone.run(() => _cb(v));
                 } as (event: any) => boolean;
             } else {
                 if (event[0] === '$') {
@@ -340,7 +340,7 @@ class DefaultDomRenderer2 implements Renderer2 {
                 }
                 const _cb = callback;
                 callback = function(...args) {
-                    return _cb(args);
+                    this.ngZone.run(() => _cb(args));
                 } as (event: any) => boolean;
             }
             

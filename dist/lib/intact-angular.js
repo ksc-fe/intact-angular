@@ -56,7 +56,6 @@ var IntactAngular = /** @class */ (function (_super) {
             if (_this.cancelAppendedQueue)
                 return;
             _this.ngZone.runOutsideAngular(function () {
-                _this.__outside = true;
                 _this.__initMountedQueue();
                 var dom = _this.init(null, _this.vNode);
                 _this.vNode.dom = dom;
@@ -65,7 +64,6 @@ var IntactAngular = /** @class */ (function (_super) {
                 placeholder.parentNode.replaceChild(dom, placeholder);
                 _this.mountedQueue.push(function () { return _this.mount(); });
                 _this.__triggerMountedQueue();
-                _this.__outside = false;
             });
         });
         this._pushUpdateParentVNodeCallback();
@@ -85,11 +83,9 @@ var IntactAngular = /** @class */ (function (_super) {
             if (_this.cancelAppendedQueue)
                 return;
             _this.ngZone.runOutsideAngular(function () {
-                _this.__outside = true;
                 _this.__initMountedQueue();
                 _this.update(lastVNode, _this.vNode);
                 _this.__triggerMountedQueue();
-                _this.__outside = false;
             });
         });
         this._pushUpdateParentVNodeCallback();
@@ -277,20 +273,6 @@ var IntactAngular = /** @class */ (function (_super) {
             this._triggerMountedQueue();
         }
         this._shouldTrigger = this.__oldTriggerFlag;
-    };
-    IntactAngular.prototype.set = function (key, value, options) {
-        var _this = this;
-        if (typeof key === 'object') {
-            options = value;
-        }
-        if (this.ngZone && !this.__outside && (!options || !options.silent)) {
-            this.ngZone.run(function () {
-                _super.prototype.set.call(_this, key, value);
-            });
-        }
-        else {
-            _super.prototype.set.call(this, key, value);
-        }
     };
     var IntactAngular_1;
     IntactAngular.decorate = decorate;

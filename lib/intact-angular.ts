@@ -30,7 +30,6 @@ export class IntactAngular extends Intact {
     private mountedQueue;
     private _shouldTrigger;
     private __oldTriggerFlag;
-    private __outside;
     private _shouldUpdateProps = false;
 
     constructor(
@@ -81,7 +80,6 @@ export class IntactAngular extends Intact {
             if (this.cancelAppendedQueue) return;
 
             this.ngZone.runOutsideAngular(() => {
-                this.__outside = true;
                 this.__initMountedQueue();
 
                 const dom = (<any>this).init(null, this.vNode);
@@ -92,7 +90,6 @@ export class IntactAngular extends Intact {
 
                 this.mountedQueue.push(() => (<any>this).mount());
                 this.__triggerMountedQueue();
-                this.__outside = false;
             });
         });
         this._pushUpdateParentVNodeCallback();
@@ -115,11 +112,9 @@ export class IntactAngular extends Intact {
             if (this.cancelAppendedQueue) return;
 
             this.ngZone.runOutsideAngular(() => {
-                this.__outside = true;
                 this.__initMountedQueue();
                 (<any>this).update(lastVNode, this.vNode);
                 this.__triggerMountedQueue();
-                this.__outside = false;
             });
         });
         this._pushUpdateParentVNodeCallback();
@@ -317,18 +312,5 @@ export class IntactAngular extends Intact {
             (<any>this)._triggerMountedQueue();
         }
         this._shouldTrigger = this.__oldTriggerFlag;
-    }
-
-    set(key, value, options) {
-        if (typeof key === 'object') {
-            options = value;
-        }
-        if (this.ngZone && !this.__outside && (!options || !options.silent)) {
-            this.ngZone.run(() => {
-                super.set(key, value);
-            });
-        } else {
-            super.set(key, value);
-        }
     }
 }

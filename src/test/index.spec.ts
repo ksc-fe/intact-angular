@@ -103,7 +103,7 @@ describe('Unit Tests', () => {
     it('should render cloned child', () => {
         const ChildrenComponent = createIntactAngularComponent(
             `<div>{self.get('children')}{self.get('children').map(vNode => {
-                return _Vdt.miss.clone(vNode);
+                return _Vdt.miss.clone(vNode, {});
             })}</div>`,
             `k-children`
         );
@@ -826,7 +826,7 @@ describe('Unit Tests', () => {
 
     it('should destroy Angular component', () => {
         const TestComponent = createIntactAngularComponent(
-            `<div v-if={!self.get('hidden')}>{self.get('children')}</div>`,
+            `debugger; <div v-if={!self.get('hidden')}>{self.get('children')}</div>`,
             `k-test`
         );
         @Component({

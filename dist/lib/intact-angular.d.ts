@@ -20,7 +20,6 @@ export declare class IntactAngular extends Intact {
     private mountedQueue;
     private _shouldTrigger;
     private __oldTriggerFlag;
-    private __outside;
     private _shouldUpdateProps;
     constructor(elRef: ElementRef, viewContainerRef: ViewContainerRef, injector: Injector, ngZone: NgZone);
     _constructor(props: any): void;
@@ -43,5 +42,4 @@ export declare class IntactAngular extends Intact {
     _pushUpdateParentVNodeCallback(): void;
     __initMountedQueue(): void;
     __triggerMountedQueue(): void;
-    set(key: any, value: any, options: any): void;
 }

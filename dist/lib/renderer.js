@@ -314,7 +314,7 @@ var DefaultDomRenderer2 = /** @class */ (function () {
                 event = "$change:" + event.slice(0, -6);
                 var _cb_1 = callback;
                 callback = function (c, v) {
-                    return _cb_1(v);
+                    this.ngZone.run(function () { return _cb_1(v); });
                 };
             }
             else {
@@ -328,7 +328,7 @@ var DefaultDomRenderer2 = /** @class */ (function () {
                     for (var _i = 0; _i < arguments.length; _i++) {
                         args[_i] = arguments[_i];
                     }
-                    return _cb_2(args);
+                    this.ngZone.run(function () { return _cb_2(args); });
                 };
             }
             target._intactNode.setProperty("ev-" + event, callback);
