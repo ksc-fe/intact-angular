@@ -279,7 +279,7 @@ describe('Unit Tests', () => {
         element.firstChild.click();
         expect(onClick).toHaveBeenCalled();
         expect(onClick.calls.count()).toEqual(1);
-        expect(onClick).toHaveBeenCalledWith('test')
+        expect(onClick).toHaveBeenCalledWith(['test'])
     });
 
     it('should bind $change event', () => {
@@ -303,7 +303,7 @@ describe('Unit Tests', () => {
         element.firstChild.click();
         expect(onClick).toHaveBeenCalled();
         expect(onClick.calls.count()).toEqual(1);
-        expect(onClick).toHaveBeenCalledWith(1);
+        expect(onClick.calls.argsFor(0)[0][1]).toBe(1);
     });
 
     it('should render basic blocks', () => {

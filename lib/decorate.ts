@@ -1,4 +1,4 @@
-import {Component, ContentChild, TemplateRef} from '@angular/core';
+import {Component, ContentChild, TemplateRef, ChangeDetectionStrategy} from '@angular/core';
 import {functionalWrapper} from './functional';
 
 export const componentTemplate = `<ng-content></ng-content>`;
@@ -18,7 +18,11 @@ export function decorateBlocks(IntactComponent, blocks) {
 }
 
 export function decorateComponent(IntactComponent, selector) {
-    Component({selector, template: componentTemplate})(IntactComponent);
+    Component({
+        selector,
+        template: componentTemplate,
+        changeDetection: ChangeDetectionStrategy.OnPush
+    })(IntactComponent);
 
     return IntactComponent;
 }

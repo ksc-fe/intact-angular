@@ -1,7 +1,9 @@
 export declare class Wrapper {
     init(lastVNode: any, nextVNode: any): any;
     update(lastVNode: any, nextVNode: any): any;
-    destroy(lastVNode: any, nextVNode: any, parentDom: any): void;
+    /**
+     * Angular element should be destroyed by Angular itself
+     */
     _handleProps(vNode: any): any;
 }
 export declare class BlockWrapper {

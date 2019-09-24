@@ -21,13 +21,17 @@ var Wrapper = /** @class */ (function () {
         patch(lastVNode, nextVNode);
         return nextVNode.dom;
     };
-    Wrapper.prototype.destroy = function (lastVNode, nextVNode, parentDom) {
-        // How to destory angular element?
-        var dom = lastVNode.dom;
-        if (!parentDom) {
-            dom.parentElement.removeChild(dom);
-        }
-    };
+    /**
+     * Angular element should be destroyed by Angular itself
+     */
+    // destroy(lastVNode, nextVNode, parentDom) {
+    // How to destory angular element?
+    // debugger;
+    // const dom = lastVNode.dom;
+    // if (!parentDom) {
+    // dom.parentElement.removeChild(dom);
+    // }
+    // }
     Wrapper.prototype._handleProps = function (vNode) {
         vNode = clone(vNode);
         var props = tslib_1.__assign({}, vNode.props);

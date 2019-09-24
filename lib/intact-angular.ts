@@ -25,6 +25,7 @@ export class IntactAngular extends Intact {
     private _placeholder;
     private __blocks__;
     private __parent__;
+    private __context__;
     private _appendQueue;
     private mountedQueue;
     private _shouldTrigger;
@@ -69,6 +70,7 @@ export class IntactAngular extends Intact {
 
         const placeholder = this._placeholder = this.elRef.nativeElement;
         this._normalizeBlocks();
+        this._normalizeContext();
         this._allowConstructor = true;
         const props = this._normalizeProps();
         this._constructor(props);
@@ -131,6 +133,7 @@ export class IntactAngular extends Intact {
         const placeholder = this._placeholder; 
         const intactNode: IntactNode = placeholder._intactNode;
         intactNode.instance = this;
+
         const children = intactNode.children.map(dom => {
             const node = (<any>dom)._intactNode;
             if (node) {
@@ -166,9 +169,9 @@ export class IntactAngular extends Intact {
 
         const props = {
             ...intactNode.props,
-            children, 
+            children,
             _blocks: this.__blocks__,
-            _context: this._normalizeContext(),
+            _context: this.__context__,
         };
 
         this.vNode.props = props;
@@ -178,7 +181,7 @@ export class IntactAngular extends Intact {
 
     _normalizeContext() {
         const context = (<any>this.viewContainerRef)._view.context;
-        return {
+        this.__context__ = {
             data: {
                 get(name) {
                     if (name !== null) {

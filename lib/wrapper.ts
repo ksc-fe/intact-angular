@@ -25,14 +25,17 @@ export class Wrapper {
         return nextVNode.dom;
     }
 
-    destroy(lastVNode, nextVNode, parentDom) {
+    /**
+     * Angular element should be destroyed by Angular itself
+     */
+    // destroy(lastVNode, nextVNode, parentDom) {
         // How to destory angular element?
-        debugger;
-        const dom = lastVNode.dom;
-        if (!parentDom) {
-            dom.parentElement.removeChild(dom);
-        }
-    }
+        // debugger;
+        // const dom = lastVNode.dom;
+        // if (!parentDom) {
+            // dom.parentElement.removeChild(dom);
+        // }
+    // }
 
     _handleProps(vNode) {
         vNode = clone(vNode);

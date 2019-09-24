@@ -309,21 +309,26 @@ var DefaultDomRenderer2 = /** @class */ (function () {
             return this.eventManager.addGlobalEventListener(target, event, decoratePreventDefault(callback));
         }
         else if (target._intactNode) {
-            var shouldRewrite = false;
             if (event.slice(-6) === 'Change') {
                 // change event name, which like `valueChange` for two way binding, to `$change:value`
                 event = "$change:" + event.slice(0, -6);
-                shouldRewrite = true;
-            }
-            else if (event[0] === '$') {
-                // change $change-value to $change:value
-                event = event.replace(/\-/, ':');
-                shouldRewrite = true;
-            }
-            if (shouldRewrite) {
                 var _cb_1 = callback;
                 callback = function (c, v) {
                     return _cb_1(v);
+                };
+            }
+            else {
+                if (event[0] === '$') {
+                    // change $change-value to $change:value
+                    event = event.replace(/\-/, ':');
+                }
+                var _cb_2 = callback;
+                callback = function () {
+                    var args = [];
+                    for (var _i = 0; _i < arguments.length; _i++) {
+                        args[_i] = arguments[_i];
+                    }
+                    return _cb_2(args);
                 };
             }
             target._intactNode.setProperty("ev-" + event, callback);

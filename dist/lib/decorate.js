@@ -1,4 +1,4 @@
-import { Component, ContentChild, TemplateRef } from '@angular/core';
+import { Component, ContentChild, TemplateRef, ChangeDetectionStrategy } from '@angular/core';
 import { functionalWrapper } from './functional';
 export var componentTemplate = "<ng-content></ng-content>";
 export var BLOCK_NAME_PREFIX = '__block__';
@@ -13,7 +13,7 @@ export function decorateBlocks(IntactComponent, blocks) {
     return IntactComponent;
 }
 export function decorateComponent(IntactComponent, selector) {
-    Component({ selector: selector, template: componentTemplate })(IntactComponent);
+    Component({ selector: selector, template: componentTemplate, changeDetection: ChangeDetectionStrategy.OnPush })(IntactComponent);
     return IntactComponent;
 }
 export function decorate(IntactComponent, selector) {
