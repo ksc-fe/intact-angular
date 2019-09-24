@@ -1,6 +1,6 @@
 import * as tslib_1 from "tslib";
 import Intact from 'intact/dist/index';
-import { Component, ElementRef, ViewContainerRef, TemplateRef, Injector, } from '@angular/core';
+import { Component, ElementRef, ViewContainerRef, TemplateRef, Injector, NgZone } from '@angular/core';
 import { Wrapper, BlockWrapper } from './wrapper';
 import { decorate, BLOCK_NAME_PREFIX } from './decorate';
 var h = Intact.Vdt.miss.h;
@@ -8,11 +8,12 @@ var intactClassName = Intact.Vdt.utils.className;
 var _a = Intact.utils, get = _a.get, set = _a.set;
 var IntactAngular = /** @class */ (function (_super) {
     tslib_1.__extends(IntactAngular, _super);
-    function IntactAngular(elRef, viewContainerRef, injector) {
+    function IntactAngular(elRef, viewContainerRef, injector, ngZone) {
         var _this = _super.call(this) || this;
         _this.elRef = elRef;
         _this.viewContainerRef = viewContainerRef;
         _this.injector = injector;
+        _this.ngZone = ngZone;
         _this.cancelAppendedQueue = false;
         _this._allowConstructor = false;
         _this._shouldUpdateProps = false;
@@ -47,20 +48,25 @@ var IntactAngular = /** @class */ (function (_super) {
         this._initAppendQueue();
         var placeholder = this._placeholder = this.elRef.nativeElement;
         this._normalizeBlocks();
+        this._normalizeContext();
         this._allowConstructor = true;
         var props = this._normalizeProps();
         this._constructor(props);
         this._appendQueue.push(function () {
             if (_this.cancelAppendedQueue)
                 return;
-            _this.__initMountedQueue();
-            var dom = _this.init(null, _this.vNode);
-            _this.vNode.dom = dom;
-            dom._intactNode = placeholder._intactNode;
-            placeholder._realElement = dom;
-            placeholder.parentNode.replaceChild(dom, placeholder);
-            _this.mountedQueue.push(function () { return _this.mount(); });
-            _this.__triggerMountedQueue();
+            _this.ngZone.runOutsideAngular(function () {
+                _this.__outside = true;
+                _this.__initMountedQueue();
+                var dom = _this.init(null, _this.vNode);
+                _this.vNode.dom = dom;
+                dom._intactNode = placeholder._intactNode;
+                placeholder._realElement = dom;
+                placeholder.parentNode.replaceChild(dom, placeholder);
+                _this.mountedQueue.push(function () { return _this.mount(); });
+                _this.__triggerMountedQueue();
+                _this.__outside = false;
+            });
         });
         this._pushUpdateParentVNodeCallback();
         this._triggerAppendQueue();
@@ -78,9 +84,13 @@ var IntactAngular = /** @class */ (function (_super) {
         this._appendQueue.push(function () {
             if (_this.cancelAppendedQueue)
                 return;
-            _this.__initMountedQueue();
-            _this.update(lastVNode, _this.vNode);
-            _this.__triggerMountedQueue();
+            _this.ngZone.runOutsideAngular(function () {
+                _this.__outside = true;
+                _this.__initMountedQueue();
+                _this.update(lastVNode, _this.vNode);
+                _this.__triggerMountedQueue();
+                _this.__outside = false;
+            });
         });
         this._pushUpdateParentVNodeCallback();
         this._triggerAppendQueue();
@@ -129,13 +139,14 @@ var IntactAngular = /** @class */ (function (_super) {
         if (intactNode.style) {
             intactNode.props.style = intactNode.style.style.cssText;
         }
-        var props = tslib_1.__assign({}, intactNode.props, { children: children, _blocks: this.__blocks__, _context: this._normalizeContext() });
+        var props = tslib_1.__assign({}, intactNode.props, { children: children, _blocks: this.__blocks__, _context: this.__context__ });
         this.vNode.props = props;
         return props;
     };
     IntactAngular.prototype._normalizeContext = function () {
         var context = this.viewContainerRef._view.context;
-        return {
+        var ngZone = this.ngZone;
+        this.__context__ = {
             data: {
                 get: function (name) {
                     if (name !== null) {
@@ -146,7 +157,9 @@ var IntactAngular = /** @class */ (function (_super) {
                     }
                 },
                 set: function (key, value) {
-                    set(context, key, value);
+                    ngZone.run(function () {
+                        set(context, key, value);
+                    });
                 }
             }
         };
@@ -265,13 +278,28 @@ var IntactAngular = /** @class */ (function (_super) {
         }
         this._shouldTrigger = this.__oldTriggerFlag;
     };
+    IntactAngular.prototype.set = function (key, value, options) {
+        var _this = this;
+        if (typeof key === 'object') {
+            options = value;
+        }
+        if (this.ngZone && !this.__outside && (!options || !options.silent)) {
+            this.ngZone.run(function () {
+                _super.prototype.set.call(_this, key, value);
+            });
+        }
+        else {
+            _super.prototype.set.call(this, key, value);
+        }
+    };
     var IntactAngular_1;
     IntactAngular.decorate = decorate;
     IntactAngular = IntactAngular_1 = tslib_1.__decorate([
         Component({}),
         tslib_1.__metadata("design:paramtypes", [ElementRef,
             ViewContainerRef,
-            Injector])
+            Injector,
+            NgZone])
     ], IntactAngular);
     return IntactAngular;
 }(Intact));

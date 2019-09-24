@@ -13,7 +13,11 @@ export function decorateBlocks(IntactComponent, blocks) {
     return IntactComponent;
 }
 export function decorateComponent(IntactComponent, selector) {
-    Component({ selector: selector, template: componentTemplate, changeDetection: ChangeDetectionStrategy.OnPush })(IntactComponent);
+    Component({
+        selector: selector,
+        template: componentTemplate,
+        changeDetection: ChangeDetectionStrategy.OnPush
+    })(IntactComponent);
     return IntactComponent;
 }
 export function decorate(IntactComponent, selector) {

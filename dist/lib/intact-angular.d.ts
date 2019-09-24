@@ -1,10 +1,11 @@
 import Intact from 'intact/dist/index';
-import { ElementRef, ViewContainerRef, Injector } from '@angular/core';
+import { ElementRef, ViewContainerRef, Injector, NgZone } from '@angular/core';
 import { decorate } from './decorate';
 export declare class IntactAngular extends Intact {
     private elRef;
     private viewContainerRef;
     private injector;
+    private ngZone;
     static decorate: typeof decorate;
     vNode: any;
     props: any;
@@ -14,12 +15,14 @@ export declare class IntactAngular extends Intact {
     private _placeholder;
     private __blocks__;
     private __parent__;
+    private __context__;
     private _appendQueue;
     private mountedQueue;
     private _shouldTrigger;
     private __oldTriggerFlag;
+    private __outside;
     private _shouldUpdateProps;
-    constructor(elRef: ElementRef, viewContainerRef: ViewContainerRef, injector: Injector);
+    constructor(elRef: ElementRef, viewContainerRef: ViewContainerRef, injector: Injector, ngZone: NgZone);
     _constructor(props: any): void;
     init(lastVNode: any, nextVNode: any): any;
     ngAfterViewInit(): void;
@@ -29,19 +32,9 @@ export declare class IntactAngular extends Intact {
     _normalizeProps(): {
         children: any[];
         _blocks: any;
-        _context: {
-            data: {
-                get(name: any): any;
-                set(key: any, value: any): void;
-            };
-        };
+        _context: any;
     };
-    _normalizeContext(): {
-        data: {
-            get(name: any): any;
-            set(key: any, value: any): void;
-        };
-    };
+    _normalizeContext(): void;
     _normalizeBlocks(): void;
     _findParentIntactComponent(): IntactAngular;
     _initVNode(): void;
@@ -50,4 +43,5 @@ export declare class IntactAngular extends Intact {
     _pushUpdateParentVNodeCallback(): void;
     __initMountedQueue(): void;
     __triggerMountedQueue(): void;
+    set(key: any, value: any, options: any): void;
 }

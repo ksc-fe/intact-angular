@@ -2,7 +2,7 @@ import Intact from 'intact/dist/index';
 import {
     Component, ElementRef, ViewContainerRef, 
     ChangeDetectorRef, ViewChild, TemplateRef,
-    Injector,
+    Injector, NgZone
 } from '@angular/core';
 import {Wrapper, BlockWrapper} from './wrapper';
 import {IntactNode} from './intact-node';
@@ -30,12 +30,14 @@ export class IntactAngular extends Intact {
     private mountedQueue;
     private _shouldTrigger;
     private __oldTriggerFlag;
+    private __outside;
     private _shouldUpdateProps = false;
 
     constructor(
         private elRef: ElementRef,
         private viewContainerRef: ViewContainerRef,
         private injector: Injector,
+        private ngZone: NgZone,
     ) {
         super();
 
@@ -78,17 +80,20 @@ export class IntactAngular extends Intact {
         this._appendQueue.push(() => {
             if (this.cancelAppendedQueue) return;
 
-            this.__initMountedQueue();
+            this.ngZone.runOutsideAngular(() => {
+                this.__outside = true;
+                this.__initMountedQueue();
 
-            const dom = (<any>this).init(null, this.vNode);
-            this.vNode.dom = dom;
-            dom._intactNode = placeholder._intactNode;
-            placeholder._realElement = dom;
-            placeholder.parentNode.replaceChild(dom, placeholder);
+                const dom = (<any>this).init(null, this.vNode);
+                this.vNode.dom = dom;
+                dom._intactNode = placeholder._intactNode;
+                placeholder._realElement = dom;
+                placeholder.parentNode.replaceChild(dom, placeholder);
 
-            this.mountedQueue.push(() => (<any>this).mount());
-
-            this.__triggerMountedQueue();
+                this.mountedQueue.push(() => (<any>this).mount());
+                this.__triggerMountedQueue();
+                this.__outside = false;
+            });
         });
         this._pushUpdateParentVNodeCallback();
 
@@ -109,9 +114,13 @@ export class IntactAngular extends Intact {
         this._appendQueue.push(() => {
             if (this.cancelAppendedQueue) return;
 
-            this.__initMountedQueue();
-            (<any>this).update(lastVNode, this.vNode);
-            this.__triggerMountedQueue();
+            this.ngZone.runOutsideAngular(() => {
+                this.__outside = true;
+                this.__initMountedQueue();
+                (<any>this).update(lastVNode, this.vNode);
+                this.__triggerMountedQueue();
+                this.__outside = false;
+            });
         });
         this._pushUpdateParentVNodeCallback();
 
@@ -181,6 +190,7 @@ export class IntactAngular extends Intact {
 
     _normalizeContext() {
         const context = (<any>this.viewContainerRef)._view.context;
+        const ngZone = this.ngZone;
         this.__context__ = {
             data: {
                 get(name) {
@@ -191,7 +201,9 @@ export class IntactAngular extends Intact {
                     }
                 },
                 set(key, value) {
-                    set(context, key, value);
+                    ngZone.run(() => {
+                        set(context, key, value);
+                    });
                 }
             }
         }
@@ -305,5 +317,18 @@ export class IntactAngular extends Intact {
             (<any>this)._triggerMountedQueue();
         }
         this._shouldTrigger = this.__oldTriggerFlag;
+    }
+
+    set(key, value, options) {
+        if (typeof key === 'object') {
+            options = value;
+        }
+        if (this.ngZone && !this.__outside && (!options || !options.silent)) {
+            this.ngZone.run(() => {
+                super.set(key, value);
+            });
+        } else {
+            super.set(key, value);
+        }
     }
 }
