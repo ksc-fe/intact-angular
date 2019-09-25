@@ -3,6 +3,7 @@ import Intact from 'intact/dist/index';
 import { Component, ElementRef, ViewContainerRef, TemplateRef, Injector, NgZone } from '@angular/core';
 import { Wrapper, BlockWrapper } from './wrapper';
 import { decorate, BLOCK_NAME_PREFIX } from './decorate';
+import { getParentIntactInstance } from './helpers';
 var h = Intact.Vdt.miss.h;
 var intactClassName = Intact.Vdt.utils.className;
 var _a = Intact.utils, get = _a.get, set = _a.set;
@@ -52,7 +53,7 @@ var IntactAngular = /** @class */ (function (_super) {
         this._allowConstructor = true;
         var props = this._normalizeProps();
         this._constructor(props);
-        this._appendQueue.push(function () {
+        this.__appendQueueRef.ref.push(function () {
             if (_this.cancelAppendedQueue)
                 return;
             _this.ngZone.runOutsideAngular(function () {
@@ -72,6 +73,8 @@ var IntactAngular = /** @class */ (function (_super) {
     IntactAngular.prototype.ngAfterViewChecked = function () {
         var _this = this;
         // we can not ignore the first checked, because it may update block
+        // TODO: we have called detectChanges for first time render block
+        // so can we ignore the first check?
         // if (this.cancelAppendedQueue || !this.vNode.dom) return;
         if (!this.vNode.dom)
             return;
@@ -79,7 +82,7 @@ var IntactAngular = /** @class */ (function (_super) {
         var lastVNode = this.vNode;
         this._initVNode();
         this._normalizeProps();
-        this._appendQueue.push(function () {
+        this.__appendQueueRef.ref.push(function () {
             if (_this.cancelAppendedQueue)
                 return;
             _this.ngZone.runOutsideAngular(function () {
@@ -140,7 +143,7 @@ var IntactAngular = /** @class */ (function (_super) {
         return props;
     };
     IntactAngular.prototype._normalizeContext = function () {
-        var context = this.viewContainerRef._view.context;
+        var context = this.viewContainerRef._view.component;
         var ngZone = this.ngZone;
         this.__context__ = {
             data: {
@@ -169,6 +172,12 @@ var IntactAngular = /** @class */ (function (_super) {
             var ref = this_1[name_1];
             if (!ref)
                 return "continue";
+            // detect the ref is the direct child of this component
+            var searchView = ref._parentView;
+            var renderParent = ref._def.renderParent;
+            var instance = getParentIntactInstance(searchView, renderParent, IntactAngular_1);
+            if (instance !== this_1)
+                return { value: void 0 };
             name_1 = name_1.substring(BLOCK_NAME_PREFIX.length).replace(/_/g, '-');
             _blocks[name_1] = function (__nouse__) {
                 var args = [];
@@ -183,7 +192,9 @@ var IntactAngular = /** @class */ (function (_super) {
         };
         var this_1 = this;
         for (var name_1 in blocks) {
-            _loop_1(name_1);
+            var state_1 = _loop_1(name_1);
+            if (typeof state_1 === "object")
+                return state_1.value;
         }
     };
     IntactAngular.prototype._findParentIntactComponent = function () {
@@ -193,15 +204,9 @@ var IntactAngular = /** @class */ (function (_super) {
             if (elDef) {
                 // find the component element
                 while (true) {
-                    var componentProvider = elDef.element.componentProvider;
-                    if (componentProvider) {
-                        var nodeIndex = componentProvider.nodeIndex;
-                        var providerData = searchView.nodes[nodeIndex];
-                        var instance = providerData.instance;
-                        if (instance && instance instanceof IntactAngular_1) {
-                            return instance;
-                        }
-                    }
+                    var instance = getParentIntactInstance(searchView, elDef, IntactAngular_1);
+                    if (instance)
+                        return instance;
                     elDef = elDef.parent;
                     if (!elDef)
                         break;
@@ -220,34 +225,46 @@ var IntactAngular = /** @class */ (function (_super) {
         this.vNode.children = this;
     };
     IntactAngular.prototype._initAppendQueue = function () {
-        if (!this._appendQueue || this._appendQueue.done) {
-            var parent_1 = this.__parent__;
-            if (parent_1) {
-                if (parent_1._appendQueue && !parent_1._appendQueue.done) {
+        var parent = this.__parent__;
+        if (!this.__appendQueueRef || this.__appendQueueRef.ref.done) {
+            if (parent) {
+                if (parent.__appendQueueRef && !parent.__appendQueueRef.ref.done) {
                     // it indicates that another child has inited the queue
-                    this._appendQueue = parent_1._appendQueue;
+                    this.__appendQueueRef = parent.__appendQueueRef;
                 }
                 else {
-                    parent_1._appendQueue = this._appendQueue = [];
+                    parent.__appendQueueRef = this.__appendQueueRef = { ref: [] };
                 }
             }
             else {
-                this._appendQueue = [];
+                this.__appendQueueRef = { ref: [] };
+            }
+        }
+        else if (parent) {
+            // if parent has queue, we should merge them, then update the ref
+            if (parent.__appendQueueRef && !parent.__appendQueueRef.ref.done) {
+                var queue = parent.__appendQueueRef.ref;
+                queue.push.apply(queue, tslib_1.__spread(this.__appendQueueRef.ref));
+                this.__appendQueueRef.ref = queue;
+            }
+            else {
+                // otherwise we should update the parent's queue
+                parent.__appendQueueRef = this.__appendQueueRef;
             }
         }
     };
     IntactAngular.prototype._triggerAppendQueue = function () {
         if (!this.__parent__) {
             var cb = void 0;
-            while (cb = this._appendQueue.pop()) {
+            while (cb = this.__appendQueueRef.ref.pop()) {
                 cb();
             }
-            this._appendQueue.done = true;
+            this.__appendQueueRef.ref.done = true;
         }
     };
     IntactAngular.prototype._pushUpdateParentVNodeCallback = function () {
         var _this = this;
-        this._appendQueue.push(function () {
+        this.__appendQueueRef.ref.push(function () {
             var parent = _this.__parent__;
             _this.parentVNode = parent && parent.vNode;
             _this.vNode.parentVNode = _this.parentVNode;
@@ -257,10 +274,10 @@ var IntactAngular = /** @class */ (function (_super) {
         this.__oldTriggerFlag = this._shouldTrigger;
         this._shouldTrigger = false;
         if (!this.mountedQueue || this.mountedQueue.done) {
-            var parent_2 = this.__parent__;
-            if (parent_2) {
-                if (parent_2.mountedQueue && !parent_2.mountedQueue.done) {
-                    this.mountedQueue = parent_2.mountedQueue;
+            var parent_1 = this.__parent__;
+            if (parent_1) {
+                if (parent_1.mountedQueue && !parent_1.mountedQueue.done) {
+                    this.mountedQueue = parent_1.mountedQueue;
                     return;
                 }
             }

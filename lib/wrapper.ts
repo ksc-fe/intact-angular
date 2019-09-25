@@ -84,6 +84,8 @@ export class BlockWrapper {
         const placeholder = this.placeholder = document.createElement('intact-content');
         const {templateRef, context} = this.vNode.props;
         const viewRef = this.viewRef = templateRef.createEmbeddedView({args: context});
+        // for call lifecycle methods
+        this.viewRef.detectChanges();
         viewRef.rootNodes.forEach(dom => {
             placeholder.appendChild(dom);
         });

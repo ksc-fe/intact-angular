@@ -16,7 +16,7 @@ export declare class IntactAngular extends Intact {
     private __blocks__;
     private __parent__;
     private __context__;
-    private _appendQueue;
+    private __appendQueueRef;
     private mountedQueue;
     private _shouldTrigger;
     private __oldTriggerFlag;
@@ -35,7 +35,7 @@ export declare class IntactAngular extends Intact {
     };
     _normalizeContext(): void;
     _normalizeBlocks(): void;
-    _findParentIntactComponent(): IntactAngular;
+    _findParentIntactComponent(): any;
     _initVNode(): void;
     _initAppendQueue(): void;
     _triggerAppendQueue(): void;

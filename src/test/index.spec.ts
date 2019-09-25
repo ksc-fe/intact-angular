@@ -313,10 +313,11 @@ describe('Unit Tests', () => {
                 {self.get('children')}
                 <div><b:suffix/></div>
                 <b:a-b>a-b</b:a-b>
+                <b:nouse>nouse</b:nouse>
             </div>`,
             `k-test`,
             null,
-            ['prefix', 'suffix', 'a-b']
+            ['prefix', 'suffix', 'a-b', 'nouse']
         );
 
         @Component({
@@ -338,15 +339,38 @@ describe('Unit Tests', () => {
         const fixture = getFixture<AppComponent>([AppComponent, TestComponent]);
         const element = fixture.nativeElement;
         const component = fixture.componentInstance;
-        expect(element.innerHTML).toBe('<div><intact-content>begin</intact-content><div>children</div><div><intact-content><span>end</span><b>!</b></intact-content></div><intact-content></intact-content></div>');
+        expect(element.innerHTML).toBe('<div><intact-content>begin</intact-content><div>children</div><div><intact-content><span>end</span><b>!</b></intact-content></div><intact-content></intact-content>nouse</div>');
 
         component.show = false;
         fixture.detectChanges();
-        expect(element.innerHTML).toBe('<div><intact-content>begin</intact-content><div>children</div><div><intact-content><b>!</b></intact-content></div><intact-content></intact-content></div>');
+        expect(element.innerHTML).toBe('<div><intact-content>begin</intact-content><div>children</div><div><intact-content><b>!</b></intact-content></div><intact-content></intact-content>nouse</div>');
 
         component.show = true;
         fixture.detectChanges();
-        expect(element.innerHTML).toBe('<div><intact-content>begin</intact-content><div>children</div><div><intact-content><span>end</span><b>!</b></intact-content></div><intact-content></intact-content></div>');
+        expect(element.innerHTML).toBe('<div><intact-content>begin</intact-content><div>children</div><div><intact-content><span>end</span><b>!</b></intact-content></div><intact-content></intact-content>nouse</div>');
+    });
+
+    it('should render only direct block', () => {
+        const createComponent = (id) => {
+            return createIntactAngularComponent(
+                `<div>{self.get('children')}<b:block>block</b:block></div>`,
+                `k-test${id}`,
+                null,
+                ['block']
+            );
+        };
+        const Test1Component = createComponent(1);
+        const Test2Component = createComponent(2); 
+
+        @Component({
+            selector: `app-root`,
+            template: `<k-test1><k-test2><ng-template #block>test</ng-template></k-test2></k-test1>`
+        })
+        class AppComponent {}
+
+        const fixture = getFixture<AppComponent>([AppComponent, Test1Component, Test2Component]);
+        const element = fixture.nativeElement;
+        expect(element.innerHTML).toBe("<div><div><intact-content>test</intact-content></div>block</div>");
     });
 
     it('should render scope blocks', () => {
@@ -428,6 +452,32 @@ describe('Unit Tests', () => {
         expect(element.innerHTML).toBe('<div><intact-content><span>test</span></intact-content></div>');
     });
 
+    it('should render blocks in functional component that nested in class component', () => {
+        const {h} = (<any>Intact).Vdt.miss;
+        const Component = createIntactComponent(`<div>{self.get('children')}<b:test /></div>`);
+        const functional = function(props) {
+            return h(Component, props);
+        };
+        functional.blocks = ['test'];
+        const FunctionalComponent = Intact.decorate(functional, 'k-functional');
+        const AppComponent = createAppComponent(
+            `
+                <k-children>
+                    <k-functional *ngFor="let i of [1, 2]">
+                        <k-children>{{ i }}</k-children>
+                        <ng-template #test>
+                            <k-children>test {{ i }}</k-children>
+                        </ng-template>
+                    </k-functional>
+                </k-children>
+            `
+        );
+
+        const fixture = getFixture([AppComponent, FunctionalComponent, IntactChildrenComponent]);
+        const element = fixture.nativeElement;
+        expect(element.innerHTML).toBe("<div><div><div>1</div><intact-content><div>test 1</div></intact-content></div><div><div>2</div><intact-content><div>test 2</div></intact-content></div></div>");
+    });
+
     it('should get contenxt in Intact functional component', () => {
         const {h} = (<any>Intact).Vdt.miss;
         const FunctionalComponent = functionalWrapper(function(props) {
@@ -457,6 +507,34 @@ describe('Unit Tests', () => {
 
         element.firstChild.click();
         expect(element.innerHTML).toBe('<div>2</div><div><div>2</div></div>');
+    });
+
+    it('should get context in functional component that nests in ngFor', () => {
+        const {h} = (<any>Intact).Vdt.miss;
+        const FunctionalComponent = functionalWrapper(function(props) {
+            const data = props._context.data;
+            const number = data.get('number');
+            return h('div', {'ev-click': () => {
+                data.set('number', number + 1);
+            }}, number);
+        }, 'k-functional');
+
+        @Component({
+            selector: 'app-root',
+            template: `
+                <k-functional *ngFor="let i of [1, 2]"></k-functional>
+            `,
+        })
+        class AppComponent {
+            number = 1;
+        }
+
+        const fixture = getFixture([AppComponent, FunctionalComponent]);
+        const element = fixture.nativeElement;
+        expect(element.innerHTML).toBe('<div>1</div><div>1</div>');
+
+        element.firstElementChild.click();
+        expect(element.innerHTML).toBe('<div>2</div><div>2</div>');
     });
 
     it('should render class and style', () => {
@@ -826,7 +904,7 @@ describe('Unit Tests', () => {
 
     it('should destroy Angular component', () => {
         const TestComponent = createIntactAngularComponent(
-            `debugger; <div v-if={!self.get('hidden')}>{self.get('children')}</div>`,
+            `<div v-if={!self.get('hidden')}>{self.get('children')}</div>`,
             `k-test`
         );
         @Component({

@@ -74,6 +74,8 @@ var BlockWrapper = /** @class */ (function () {
         var placeholder = this.placeholder = document.createElement('intact-content');
         var _a = this.vNode.props, templateRef = _a.templateRef, context = _a.context;
         var viewRef = this.viewRef = templateRef.createEmbeddedView({ args: context });
+        // for call lifecycle methods
+        this.viewRef.detectChanges();
         viewRef.rootNodes.forEach(function (dom) {
             placeholder.appendChild(dom);
         });

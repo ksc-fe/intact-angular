@@ -3,11 +3,14 @@ import { functionalWrapper } from './functional';
 export var componentTemplate = "<ng-content></ng-content>";
 export var BLOCK_NAME_PREFIX = '__block__';
 // initialize the decorator of TemplateRef
-// @ContentChild('ref', {static: false, read: TemplateRef}) ref: TemplateRef<any>;
+// @ContentChildren('ref', {read: TemplateRef, descendants: false}) ref: TemplateRef<any>;
+// The reason we use ContentChildren rather than ContentChild is that ContentChildren support 
+// include only direct children
+// But the `descendants` does not work, why?
 export function decorateBlocks(IntactComponent, blocks) {
     blocks.forEach(function (name) {
         name = name.replace(/-/g, '_');
-        var decorate = ContentChild(name, { static: false, read: TemplateRef });
+        var decorate = ContentChild(name, { read: TemplateRef, static: false });
         decorate(IntactComponent.prototype, BLOCK_NAME_PREFIX + name);
     });
     return IntactComponent;

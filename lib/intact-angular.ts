@@ -7,6 +7,7 @@ import {
 import {Wrapper, BlockWrapper} from './wrapper';
 import {IntactNode} from './intact-node';
 import {decorate, BLOCK_NAME_PREFIX} from './decorate';
+import {getParentIntactInstance} from './helpers';
 
 const {h} = Intact.Vdt.miss;
 const {className: intactClassName} = Intact.Vdt.utils;
@@ -26,7 +27,7 @@ export class IntactAngular extends Intact {
     private __blocks__;
     private __parent__;
     private __context__;
-    private _appendQueue;
+    private __appendQueueRef: {ref: any};
     private mountedQueue;
     private _shouldTrigger;
     private __oldTriggerFlag;
@@ -76,7 +77,7 @@ export class IntactAngular extends Intact {
         const props = this._normalizeProps();
         this._constructor(props);
 
-        this._appendQueue.push(() => {
+        this.__appendQueueRef.ref.push(() => {
             if (this.cancelAppendedQueue) return;
 
             this.ngZone.runOutsideAngular(() => {
@@ -99,6 +100,8 @@ export class IntactAngular extends Intact {
 
     ngAfterViewChecked() {
         // we can not ignore the first checked, because it may update block
+        // TODO: we have called detectChanges for first time render block
+        // so can we ignore the first check?
         // if (this.cancelAppendedQueue || !this.vNode.dom) return;
         if (!this.vNode.dom) return;
 
@@ -108,7 +111,7 @@ export class IntactAngular extends Intact {
         this._initVNode();
         this._normalizeProps();
 
-        this._appendQueue.push(() => {
+        this.__appendQueueRef.ref.push(() => {
             if (this.cancelAppendedQueue) return;
 
             this.ngZone.runOutsideAngular(() => {
@@ -184,7 +187,7 @@ export class IntactAngular extends Intact {
     }
 
     _normalizeContext() {
-        const context = (<any>this.viewContainerRef)._view.context;
+        const context = (<any>this.viewContainerRef)._view.component;
         const ngZone = this.ngZone;
         this.__context__ = {
             data: {
@@ -213,6 +216,12 @@ export class IntactAngular extends Intact {
             const ref = this[name];
             if (!ref) continue;
 
+            // detect the ref is the direct child of this component
+            const searchView = ref._parentView;
+            const renderParent = ref._def.renderParent;
+            const instance = getParentIntactInstance(searchView, renderParent, IntactAngular);
+            if (instance !== this) return;
+
             name = name.substring(BLOCK_NAME_PREFIX.length).replace(/_/g, '-');
             _blocks[name] = (__nouse__, ...args) => {
                 return h(BlockWrapper, {
@@ -230,15 +239,8 @@ export class IntactAngular extends Intact {
             if (elDef) {
                 // find the component element
                 while (true) {
-                    const componentProvider = elDef.element.componentProvider;
-                    if (componentProvider) {
-                        const nodeIndex = componentProvider.nodeIndex;
-                        const providerData = searchView.nodes[nodeIndex];
-                        const instance = providerData.instance;
-                        if (instance && instance instanceof IntactAngular) {
-                            return instance; 
-                        }
-                    }
+                    const instance = getParentIntactInstance(searchView, elDef, IntactAngular);
+                    if (instance) return instance;
                     elDef = elDef.parent;
                     if (!elDef) break;
                 }
@@ -258,17 +260,27 @@ export class IntactAngular extends Intact {
     }
 
     _initAppendQueue() {
-        if (!this._appendQueue || this._appendQueue.done) {
-            const parent = this.__parent__;
+        const parent = this.__parent__;
+        if (!this.__appendQueueRef || this.__appendQueueRef.ref.done) {
             if (parent) {
-                if (parent._appendQueue && !parent._appendQueue.done) {
+                if (parent.__appendQueueRef && !parent.__appendQueueRef.ref.done) {
                     // it indicates that another child has inited the queue
-                    this._appendQueue = parent._appendQueue;
+                    this.__appendQueueRef = parent.__appendQueueRef;
                 } else {
-                    parent._appendQueue = this._appendQueue = [];
+                    parent.__appendQueueRef = this.__appendQueueRef = {ref: []};
                 }
             } else {
-                this._appendQueue = [];
+                this.__appendQueueRef = {ref: []};
+            }
+        } else if (parent) {
+            // if parent has queue, we should merge them, then update the ref
+            if (parent.__appendQueueRef && !parent.__appendQueueRef.ref.done) {
+                const queue = parent.__appendQueueRef.ref;
+                queue.push(...this.__appendQueueRef.ref);
+                this.__appendQueueRef.ref = queue;
+            } else {
+                // otherwise we should update the parent's queue
+                parent.__appendQueueRef = this.__appendQueueRef;
             }
         }
     }
@@ -276,15 +288,15 @@ export class IntactAngular extends Intact {
     _triggerAppendQueue() {
         if (!this.__parent__) {
             let cb;
-            while (cb = this._appendQueue.pop()) {
+            while (cb = this.__appendQueueRef.ref.pop()) {
                 cb();
             }
-            this._appendQueue.done = true;
+            this.__appendQueueRef.ref.done = true;
         }
     }
 
     _pushUpdateParentVNodeCallback() {
-        this._appendQueue.push(() => {
+        this.__appendQueueRef.ref.push(() => {
             const parent = this.__parent__;
             this.parentVNode = parent && parent.vNode;
             this.vNode.parentVNode = this.parentVNode;
