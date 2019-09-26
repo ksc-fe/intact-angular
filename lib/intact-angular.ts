@@ -2,7 +2,7 @@ import Intact from 'intact/dist/index';
 import {
     Component, ElementRef, ViewContainerRef, 
     ChangeDetectorRef, ViewChild, TemplateRef,
-    Injector, NgZone
+    Injector, NgZone, ApplicationRef,
 } from '@angular/core';
 import {Wrapper, BlockWrapper} from './wrapper';
 import {IntactNode} from './intact-node';
@@ -32,16 +32,22 @@ export class IntactAngular extends Intact {
     private _shouldTrigger;
     private __oldTriggerFlag;
     private _shouldUpdateProps = false;
+    private __firstCheck = true;
+    private _isAngular = false;
+    private _hasDestroyedByAngular = false;
 
     constructor(
         private elRef: ElementRef,
         private viewContainerRef: ViewContainerRef,
         private injector: Injector,
         private ngZone: NgZone,
+        // private applicationRef: ApplicationRef,
+        // private changeDetectorRef: ChangeDetectorRef,
     ) {
         super();
 
         if (elRef instanceof ElementRef) {
+            this._isAngular = true;
             // is called in Angular
             // define vNode firstly, then update its props;
             this._initVNode();
@@ -80,6 +86,8 @@ export class IntactAngular extends Intact {
         this.__appendQueueRef.ref.push(() => {
             if (this.cancelAppendedQueue) return;
 
+            this.__updateParentVNode();
+
             this.ngZone.runOutsideAngular(() => {
                 this.__initMountedQueue();
 
@@ -93,7 +101,6 @@ export class IntactAngular extends Intact {
                 this.__triggerMountedQueue();
             });
         });
-        this._pushUpdateParentVNodeCallback();
 
         this._triggerAppendQueue();
     }
@@ -102,6 +109,7 @@ export class IntactAngular extends Intact {
         // we can not ignore the first checked, because it may update block
         // TODO: we have called detectChanges for first time render block
         // so can we ignore the first check?
+        if (this.__firstCheck) return this.__firstCheck = false;
         // if (this.cancelAppendedQueue || !this.vNode.dom) return;
         if (!this.vNode.dom) return;
 
@@ -114,26 +122,33 @@ export class IntactAngular extends Intact {
         this.__appendQueueRef.ref.push(() => {
             if (this.cancelAppendedQueue) return;
 
+            this.__updateParentVNode();
+
             this.ngZone.runOutsideAngular(() => {
                 this.__initMountedQueue();
                 (<any>this).update(lastVNode, this.vNode);
                 this.__triggerMountedQueue();
             });
         });
-        this._pushUpdateParentVNodeCallback();
 
         this._triggerAppendQueue();
     }
 
     destroy(lastVNode, nextVNode, parentDom) {
-        if (lastVNode) return;
-        super.destroy(lastVNode, nextVNode, parentDom);
+        if (this._isAngular) {
+            // maybe the parent that is Angular element has been destroyed by Angular
+            if (this._hasDestroyedByAngular) return;
+            super.destroy(lastVNode, nextVNode, parentDom);
+            // we should reset the destroyed flag, because we will reuse this instance
+            (<any>this).destroyed = false;
+        } else {
+            super.destroy(lastVNode, nextVNode, parentDom);
+        }
     }
 
     ngOnDestroy() {
-        // if (this.cancelAppendedQueue) return;
-
-        (<any>this).destroy();
+        this._hasDestroyedByAngular = true;
+        super.destroy();
     }
 
     _normalizeProps() {
@@ -151,6 +166,10 @@ export class IntactAngular extends Intact {
                 node.instance._shouldUpdateProps = true;
                 vNode.props = node.instance.vNode.props;
                 return vNode;
+            } else if (dom.nodeType === 3) {
+                // text node use the nodeValue as vNode
+                // KPC components library use this for detecting text vNode
+                return dom.nodeValue;
             }
             // angular can insert dom, so we must keep the key consistent
             // we use the dom as key
@@ -179,6 +198,7 @@ export class IntactAngular extends Intact {
             children,
             _blocks: this.__blocks__,
             _context: this.__context__,
+            key: placeholder,
         };
 
         this.vNode.props = props;
@@ -295,12 +315,10 @@ export class IntactAngular extends Intact {
         }
     }
 
-    _pushUpdateParentVNodeCallback() {
-        this.__appendQueueRef.ref.push(() => {
-            const parent = this.__parent__;
-            this.parentVNode = parent && parent.vNode;
-            this.vNode.parentVNode = this.parentVNode;
-        });
+    __updateParentVNode() {
+        const parent = this.__parent__;
+        this.parentVNode = parent && parent.vNode;
+        this.vNode.parentVNode = this.parentVNode;
     }
 
     __initMountedQueue() {

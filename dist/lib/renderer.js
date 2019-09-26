@@ -113,7 +113,7 @@ var DefaultDomRenderer2 = /** @class */ (function () {
             return document.createElementNS(NAMESPACE_URIS[namespace] || namespace, name);
         }
         else if (name.substring(0, 2) === 'k-') {
-            var el = document.createComment('intact-node');
+            var el = document.createComment(name);
             el._intactNode = new IntactNode(name);
             return el;
         }
@@ -314,7 +314,11 @@ var DefaultDomRenderer2 = /** @class */ (function () {
                 event = "$change:" + event.slice(0, -6);
                 var _cb_1 = callback;
                 callback = function (c, v) {
-                    this.ngZone.run(function () { return _cb_1(v); });
+                    // don't change the property, if this component has not been rendered
+                    // otherwise it will throw ExpressionChangedAfterItHasBeenCheckedError
+                    if (this.rendered) {
+                        this.ngZone.run(function () { return _cb_1(v); });
+                    }
                 };
             }
             else {
@@ -328,7 +332,9 @@ var DefaultDomRenderer2 = /** @class */ (function () {
                     for (var _i = 0; _i < arguments.length; _i++) {
                         args[_i] = arguments[_i];
                     }
-                    this.ngZone.run(function () { return _cb_2(args); });
+                    if (this.inited) {
+                        this.ngZone.run(function () { return _cb_2(args); });
+                    }
                 };
             }
             target._intactNode.setProperty("ev-" + event, callback);

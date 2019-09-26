@@ -125,7 +125,7 @@ class DefaultDomRenderer2 implements Renderer2 {
             // will result in undefined, so we just return the namespace here.
             return document.createElementNS(NAMESPACE_URIS[namespace] || namespace, name);
         } else if (name.substring(0, 2) === 'k-') {
-            const el: any = document.createComment('intact-node');
+            const el: any = document.createComment(name);
             el._intactNode = new IntactNode(name);
             return el;
         }
@@ -331,7 +331,11 @@ class DefaultDomRenderer2 implements Renderer2 {
                 event = `$change:` + event.slice(0, -6);
                 const _cb = callback;
                 callback = function(c, v) {
-                    this.ngZone.run(() => _cb(v));
+                    // don't change the property, if this component has not been rendered
+                    // otherwise it will throw ExpressionChangedAfterItHasBeenCheckedError
+                    if (this.rendered) {
+                        this.ngZone.run(() => _cb(v));
+                    }
                 } as (event: any) => boolean;
             } else {
                 if (event[0] === '$') {
@@ -340,7 +344,9 @@ class DefaultDomRenderer2 implements Renderer2 {
                 }
                 const _cb = callback;
                 callback = function(...args) {
-                    this.ngZone.run(() => _cb(args));
+                    if (this.inited) {
+                        this.ngZone.run(() => _cb(args));
+                    }
                 } as (event: any) => boolean;
             }
             

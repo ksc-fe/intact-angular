@@ -21,17 +21,21 @@ export declare class IntactAngular extends Intact {
     private _shouldTrigger;
     private __oldTriggerFlag;
     private _shouldUpdateProps;
+    private __firstCheck;
+    private _isAngular;
+    private _hasDestroyedByAngular;
     constructor(elRef: ElementRef, viewContainerRef: ViewContainerRef, injector: Injector, ngZone: NgZone);
     _constructor(props: any): void;
     init(lastVNode: any, nextVNode: any): any;
     ngAfterViewInit(): void;
-    ngAfterViewChecked(): void;
+    ngAfterViewChecked(): boolean;
     destroy(lastVNode: any, nextVNode: any, parentDom: any): void;
     ngOnDestroy(): void;
     _normalizeProps(): {
         children: any[];
         _blocks: any;
         _context: any;
+        key: any;
     };
     _normalizeContext(): void;
     _normalizeBlocks(): void;
@@ -39,7 +43,7 @@ export declare class IntactAngular extends Intact {
     _initVNode(): void;
     _initAppendQueue(): void;
     _triggerAppendQueue(): void;
-    _pushUpdateParentVNodeCallback(): void;
+    __updateParentVNode(): void;
     __initMountedQueue(): void;
     __triggerMountedQueue(): void;
 }

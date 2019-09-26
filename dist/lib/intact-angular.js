@@ -1,6 +1,6 @@
 import * as tslib_1 from "tslib";
 import Intact from 'intact/dist/index';
-import { Component, ElementRef, ViewContainerRef, TemplateRef, Injector, NgZone } from '@angular/core';
+import { Component, ElementRef, ViewContainerRef, TemplateRef, Injector, NgZone, } from '@angular/core';
 import { Wrapper, BlockWrapper } from './wrapper';
 import { decorate, BLOCK_NAME_PREFIX } from './decorate';
 import { getParentIntactInstance } from './helpers';
@@ -18,7 +18,11 @@ var IntactAngular = /** @class */ (function (_super) {
         _this.cancelAppendedQueue = false;
         _this._allowConstructor = false;
         _this._shouldUpdateProps = false;
+        _this.__firstCheck = true;
+        _this._isAngular = false;
+        _this._hasDestroyedByAngular = false;
         if (elRef instanceof ElementRef) {
+            _this._isAngular = true;
             // is called in Angular
             // define vNode firstly, then update its props;
             _this._initVNode();
@@ -56,6 +60,7 @@ var IntactAngular = /** @class */ (function (_super) {
         this.__appendQueueRef.ref.push(function () {
             if (_this.cancelAppendedQueue)
                 return;
+            _this.__updateParentVNode();
             _this.ngZone.runOutsideAngular(function () {
                 _this.__initMountedQueue();
                 var dom = _this.init(null, _this.vNode);
@@ -67,7 +72,6 @@ var IntactAngular = /** @class */ (function (_super) {
                 _this.__triggerMountedQueue();
             });
         });
-        this._pushUpdateParentVNodeCallback();
         this._triggerAppendQueue();
     };
     IntactAngular.prototype.ngAfterViewChecked = function () {
@@ -75,6 +79,8 @@ var IntactAngular = /** @class */ (function (_super) {
         // we can not ignore the first checked, because it may update block
         // TODO: we have called detectChanges for first time render block
         // so can we ignore the first check?
+        if (this.__firstCheck)
+            return this.__firstCheck = false;
         // if (this.cancelAppendedQueue || !this.vNode.dom) return;
         if (!this.vNode.dom)
             return;
@@ -85,23 +91,31 @@ var IntactAngular = /** @class */ (function (_super) {
         this.__appendQueueRef.ref.push(function () {
             if (_this.cancelAppendedQueue)
                 return;
+            _this.__updateParentVNode();
             _this.ngZone.runOutsideAngular(function () {
                 _this.__initMountedQueue();
                 _this.update(lastVNode, _this.vNode);
                 _this.__triggerMountedQueue();
             });
         });
-        this._pushUpdateParentVNodeCallback();
         this._triggerAppendQueue();
     };
     IntactAngular.prototype.destroy = function (lastVNode, nextVNode, parentDom) {
-        if (lastVNode)
-            return;
-        _super.prototype.destroy.call(this, lastVNode, nextVNode, parentDom);
+        if (this._isAngular) {
+            // maybe the parent that is Angular element has been destroyed by Angular
+            if (this._hasDestroyedByAngular)
+                return;
+            _super.prototype.destroy.call(this, lastVNode, nextVNode, parentDom);
+            // we should reset the destroyed flag, because we will reuse this instance
+            this.destroyed = false;
+        }
+        else {
+            _super.prototype.destroy.call(this, lastVNode, nextVNode, parentDom);
+        }
     };
     IntactAngular.prototype.ngOnDestroy = function () {
-        // if (this.cancelAppendedQueue) return;
-        this.destroy();
+        this._hasDestroyedByAngular = true;
+        _super.prototype.destroy.call(this);
     };
     IntactAngular.prototype._normalizeProps = function () {
         var placeholder = this._placeholder;
@@ -117,6 +131,11 @@ var IntactAngular = /** @class */ (function (_super) {
                 node.instance._shouldUpdateProps = true;
                 vNode.props = node.instance.vNode.props;
                 return vNode;
+            }
+            else if (dom.nodeType === 3) {
+                // text node use the nodeValue as vNode
+                // KPC components library use this for detecting text vNode
+                return dom.nodeValue;
             }
             // angular can insert dom, so we must keep the key consistent
             // we use the dom as key
@@ -138,7 +157,7 @@ var IntactAngular = /** @class */ (function (_super) {
         if (intactNode.style) {
             intactNode.props.style = intactNode.style.style.cssText;
         }
-        var props = tslib_1.__assign({}, intactNode.props, { children: children, _blocks: this.__blocks__, _context: this.__context__ });
+        var props = tslib_1.__assign({}, intactNode.props, { children: children, _blocks: this.__blocks__, _context: this.__context__, key: placeholder });
         this.vNode.props = props;
         return props;
     };
@@ -262,13 +281,10 @@ var IntactAngular = /** @class */ (function (_super) {
             this.__appendQueueRef.ref.done = true;
         }
     };
-    IntactAngular.prototype._pushUpdateParentVNodeCallback = function () {
-        var _this = this;
-        this.__appendQueueRef.ref.push(function () {
-            var parent = _this.__parent__;
-            _this.parentVNode = parent && parent.vNode;
-            _this.vNode.parentVNode = _this.parentVNode;
-        });
+    IntactAngular.prototype.__updateParentVNode = function () {
+        var parent = this.__parent__;
+        this.parentVNode = parent && parent.vNode;
+        this.vNode.parentVNode = this.parentVNode;
     };
     IntactAngular.prototype.__initMountedQueue = function () {
         this.__oldTriggerFlag = this._shouldTrigger;

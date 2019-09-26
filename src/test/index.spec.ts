@@ -478,6 +478,39 @@ describe('Unit Tests', () => {
         expect(element.innerHTML).toBe("<div><div><div>1</div><intact-content><div>test 1</div></intact-content></div><div><div>2</div><intact-content><div>test 2</div></intact-content></div></div>");
     });
 
+    it('should handle text node directly', () => {
+        const TestComponent = createIntactAngularComponent(
+            `
+                <div>
+                    {self.get('children').map(vNode => {
+                        if (typeof vNode === 'string') {
+                            return <span>{vNode}</span>
+                        }
+                        return vNode;
+                    })}
+                </div>
+            `,
+            `k-test`
+        );
+
+        @Component({
+            selector: 'app-root',
+            template: `<k-test>a{{ value }}<b>b</b>{{ value }}<i>c</i></k-test>`
+        })
+        class AppComponent {
+            value = '1';
+        }
+
+        const fixture = getFixture<AppComponent>([AppComponent, TestComponent]);
+        const element = fixture.nativeElement;
+        expect(element.innerHTML).toBe('<div><span>a1</span><b>b</b><span>1</span><i>c</i></div>');
+
+        const component = fixture.componentInstance;
+        component.value = '';
+        fixture.detectChanges();
+        expect(element.innerHTML).toBe('<div><span>a</span><b>b</b><span></span><i>c</i></div>');
+    });
+
     it('should get contenxt in Intact functional component', () => {
         const {h} = (<any>Intact).Vdt.miss;
         const FunctionalComponent = functionalWrapper(function(props) {
@@ -649,6 +682,48 @@ describe('Unit Tests', () => {
         const fixture = getFixture([AppComponent, IntactChildrenComponent, SimpleComponent]);
     });
 
+    it('should get parentVNode that nested in Intact component in Intact template', () => {
+        const Wrapper = createIntactComponent(`<select>{self.get('children')}</select>`);
+        const SelectComponent = createIntactAngularComponent(
+            `<Wrapper>{self.get('children')}</Wrapper>`,
+            `k-select`,
+            {
+                _init() {
+                    this.Wrapper = Wrapper;
+                }
+            }
+        );
+        const OptionComponent = createIntactAngularComponent(
+            `<option>{self.get('children')}</option>`,
+            `k-option`,
+            {
+                _beforeCreate() {
+                    const vNode = this.parentVNode.parentVNode;
+                    expect(vNode.tag).toBe(Wrapper);
+                },
+                _update() {
+                    const vNode = this.parentVNode.parentVNode;
+                    expect(vNode.tag).toBe(Wrapper);
+                }
+            }
+        );
+        @Component({
+            selector: 'app-root',
+            template: `<k-select><k-option #option>option {{ value }}</k-option></k-select>`
+        })
+        class AppComponent {
+            value = 1;
+            @ViewChild('option', {static: true, read: OptionComponent}) option;
+        }
+
+        const fixture = getFixture<AppComponent>([AppComponent, SelectComponent, OptionComponent]);
+        const component = fixture.componentInstance;
+        console.log(component.option.parentVNode);
+        expect(component.option.parentVNode.parentVNode.tag).toBe(Wrapper);
+        component.value = 2;
+        fixture.detectChanges();
+    });
+
     it('should handle children vNode in Intact template', () => {
         const GroupComponent = createIntactAngularComponent(
             `<ul>
@@ -760,7 +835,7 @@ describe('Unit Tests', () => {
         expect(ngOnDestroy.calls.count()).toEqual(0);
         expect(beforeCreate.calls.count()).toEqual(1);
         expect(mount.calls.count()).toEqual(1);
-        expect(update.calls.count()).toEqual(1);
+        expect(update.calls.count()).toEqual(0);
         expect(destroy.calls.count()).toEqual(0);
         // ItemComponent
         expect(methods._beforeCreate.calls.count()).toEqual(1);
@@ -774,7 +849,7 @@ describe('Unit Tests', () => {
         expect(ngOnDestroy.calls.count()).toEqual(0);
         expect(beforeCreate.calls.count()).toEqual(1);
         expect(mount.calls.count()).toEqual(1);
-        expect(update.calls.count()).toEqual(3);
+        expect(update.calls.count()).toEqual(2);
         expect(destroy.calls.count()).toEqual(0);
         // ItemComponent
         expect(methods._beforeCreate.calls.count()).toEqual(1);
@@ -805,32 +880,64 @@ describe('Unit Tests', () => {
             `<div>{!self.get('hide') ? self.get('children') : undefined}</div>`,
             `k-test`
         );
-        const destroy = jasmine.createSpy();
+        let wrapperCount = 0;
+        const Wrapper = createIntactAngularComponent(`<div>{self.get('children')}</div>`, 'k-wrapper', {
+            _mount() {
+                wrapperCount++;
+            },
+
+            _destroy() {
+                wrapperCount--;
+            }
+        });
+        let childCount = 0;
         const ChildComponent = createIntactAngularComponent(
-            `<div>test</div>`,
+            `<Wrapper>{self.get('children')}</Wrapper>`,
             `k-child`,
             {
-                _destroy: destroy,
+                _init() {
+                    this.Wrapper = Wrapper;
+                },
+                _mount() {
+                    childCount++;
+                },
+                _destroy() {
+                    childCount--;
+                }
             }
         );
         const AppComponent = createAppComponent(
-            `<k-test [hide]="hide" *ngIf="!remove"><k-child></k-child></k-test>`
+            `<k-test [hide]="hide" *ngIf="!remove">
+                <k-child>
+                    <k-wrapper>test</k-wrapper>
+                    <div>
+                        <k-wrapper>test</k-wrapper>
+                    </div>
+                </k-child>
+            </k-test>`
         );
 
-        const fixture = getFixture([AppComponent, ChildComponent, TestComponent]);
+        const fixture = getFixture([AppComponent, ChildComponent, TestComponent, Wrapper]);
         const component = fixture.componentInstance;
+        expect(childCount).toBe(1);
+        expect(wrapperCount).toBe(3);
+
         (<any>component).hide = true;
         fixture.detectChanges();
+        expect(childCount).toBe(0);
+        // the k-wrapper which nests in div will not be destroyed, and not be re-created too
+        expect(wrapperCount).toBe(1);
+
         (<any>component).hide = false;
         fixture.detectChanges();
-        (<any>component).hide = true;
-        fixture.detectChanges();
-        expect(destroy.calls.count()).toBe(0);
-
+        expect(childCount).toBe(1);
+        expect(wrapperCount).toBe(3);
+        
         // remove really
         (<any>component).remove = true;
         fixture.detectChanges();
-        expect(destroy.calls.count()).toBe(1);
+        expect(childCount).toBe(0);
+        expect(wrapperCount).toBe(0);
     });
 
     it('should update children\'s props when Intact component has changed them', () => {
@@ -944,5 +1051,26 @@ describe('Unit Tests', () => {
         component.show();
         fixture.detectChanges();
         expect(element.innerHTML).toBe('<div><app-test><div>test</div></app-test></div>');
+    });
+
+    it('should not throw ExpressionChangedAfterItHasBeenCheckedError when we fix value in Intact component', () => {
+        const TestComponent = createIntactAngularComponent(
+            `<div>{self.get('value')}</div>`,
+            `k-test`,
+            {
+                _init() {
+                    this.on('$receive:value', () => {
+                        this.set('value', 0);
+                    });
+                }
+            }
+        );
+        const AppComponent = createAppComponent(`<k-test [(value)]="value"></k-test>`);
+
+        const fixture = getFixture([AppComponent, TestComponent]);
+        const component = fixture.componentInstance;
+        const element = fixture.nativeElement;
+        expect(element.innerHTML).toBe('<div>0</div>');
+        expect((<any>component).value).toBe(undefined);
     });
 });
