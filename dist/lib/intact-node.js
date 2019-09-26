@@ -1,6 +1,5 @@
 var IntactNode = /** @class */ (function () {
-    function IntactNode(type) {
-        this.type = type;
+    function IntactNode() {
         this.props = {};
         this.children = [];
         this.blocks = {};

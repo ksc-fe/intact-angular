@@ -105,9 +105,12 @@ var IntactAngular = /** @class */ (function (_super) {
             // maybe the parent that is Angular element has been destroyed by Angular
             if (this._hasDestroyedByAngular)
                 return;
-            _super.prototype.destroy.call(this, lastVNode, nextVNode, parentDom);
+            this.vdt.destroy();
+            this._destroy(lastVNode, nextVNode);
+            this.trigger('$destroyed', this);
+            // super.destroy(lastVNode, nextVNode, parentDom);
             // we should reset the destroyed flag, because we will reuse this instance
-            this.destroyed = false;
+            // (<any>this).destroyed = false;
         }
         else {
             _super.prototype.destroy.call(this, lastVNode, nextVNode, parentDom);

@@ -138,9 +138,12 @@ export class IntactAngular extends Intact {
         if (this._isAngular) {
             // maybe the parent that is Angular element has been destroyed by Angular
             if (this._hasDestroyedByAngular) return;
-            super.destroy(lastVNode, nextVNode, parentDom);
+            (<any>this).vdt.destroy();
+            (<any>this)._destroy(lastVNode, nextVNode);
+            (<any>this).trigger('$destroyed', this);
+            // super.destroy(lastVNode, nextVNode, parentDom);
             // we should reset the destroyed flag, because we will reuse this instance
-            (<any>this).destroyed = false;
+            // (<any>this).destroyed = false;
         } else {
             super.destroy(lastVNode, nextVNode, parentDom);
         }

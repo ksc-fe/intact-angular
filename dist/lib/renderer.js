@@ -114,7 +114,7 @@ var DefaultDomRenderer2 = /** @class */ (function () {
         }
         else if (name.substring(0, 2) === 'k-') {
             var el = document.createComment(name);
-            el._intactNode = new IntactNode(name);
+            el._intactNode = new IntactNode();
             return el;
         }
         return document.createElement(name);
