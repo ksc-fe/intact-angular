@@ -8,7 +8,7 @@ export class IntactNode {
     public className: object | null = null;
     public style = null;
 
-    constructor(private type?: string) {  }
+    constructor() {  }
 
     setProperty(name: string, value: any) {
         // class has handled in addClass method

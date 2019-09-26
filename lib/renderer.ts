@@ -126,7 +126,7 @@ class DefaultDomRenderer2 implements Renderer2 {
             return document.createElementNS(NAMESPACE_URIS[namespace] || namespace, name);
         } else if (name.substring(0, 2) === 'k-') {
             const el: any = document.createComment(name);
-            el._intactNode = new IntactNode(name);
+            el._intactNode = new IntactNode();
             return el;
         }
 
