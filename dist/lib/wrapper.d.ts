@@ -10,6 +10,7 @@ export declare class BlockWrapper {
     private placeholder;
     private vNode;
     private viewRef;
+    static $id: string;
     init(lastVNode: any, nextVNode: any): any;
     update(lastVNode: any, nextVNode: any): any;
     destroy(): void;

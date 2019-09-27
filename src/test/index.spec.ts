@@ -103,7 +103,7 @@ describe('Unit Tests', () => {
     it('should render cloned child', () => {
         const ChildrenComponent = createIntactAngularComponent(
             `<div>{self.get('children')}{self.get('children').map(vNode => {
-                return _Vdt.miss.clone(vNode, {});
+                return _Vdt.miss.clone(vNode, null, true);
             })}</div>`,
             `k-children`
         );
@@ -371,6 +371,40 @@ describe('Unit Tests', () => {
         const fixture = getFixture<AppComponent>([AppComponent, Test1Component, Test2Component]);
         const element = fixture.nativeElement;
         expect(element.innerHTML).toBe("<div><div><intact-content>test</intact-content></div>block</div>");
+    });
+
+    it('should detect text node of block', () => {
+        const createComponent = (id) => {
+            return createIntactAngularComponent(
+                `let vNodes = blocks.block.call(this);
+                if (vNodes.tag.$id === 'AngularBlockWrapper' && vNodes.props.isText) {
+                    vNodes = <span>{vNodes}</span>;
+                }
+                <div>{vNodes}</div>`,
+                `k-test${id}`,
+                null,
+                ['block']
+            );
+        };
+        const Test1Component = createComponent(1);
+        const Test2Component = createComponent(2); 
+
+        @Component({
+            selector: `app-root`,
+            template: `
+                <k-test1>
+                    <ng-template #block><div>test</div></ng-template>
+                </k-test1>
+                <k-test2>
+                    <ng-template #block>test {{ 'test' }}</ng-template>
+                </k-test2>
+            `
+        })
+        class AppComponent {}
+
+        const fixture = getFixture<AppComponent>([AppComponent, Test1Component, Test2Component]);
+        const element = fixture.nativeElement;
+        expect(element.innerHTML).toBe("<div><intact-content><div>test</div></intact-content></div><div><span><intact-content>test test</intact-content></span></div>");
     });
 
     it('should render scope blocks', () => {
@@ -1007,6 +1041,66 @@ describe('Unit Tests', () => {
         component.test.update();
         div.click();
         expect(onClick.calls.count()).toEqual(2);
+    });
+
+    it('should bind event when Intact has changed its props and it is an Intact component', () => {
+        const onClick = jasmine.createSpy();
+        // const onClick = function() { console.log('click') }
+        const {clone} = (<any>Intact).Vdt.miss;
+        const ChildComponent = createIntactAngularComponent(
+            `<div ev-click={self.onClick}>click</div>`,
+            `k-child`,
+            {
+                onClick() {
+                    this.trigger('click');
+                }
+            }
+        );
+        const TestComponent = createIntactAngularComponent(
+            `<div>{self.get('children')}</div>`,
+            `k-test`,
+            {
+                _init() {
+                    this.on('$receive:children', this._changeProps);
+                },
+
+                _changeProps() {
+                    const children = clone(this.get('children.0'));
+                    const props = {...children.props};
+                    props['ev-click'] = onClick.bind(this);
+                    children.props = props;
+                    this.set('children.0', children, {silent: true});
+                },
+
+                _removeEvent() {
+                    const children = clone(this.get('children.0'));
+                    const props = {...children.props};
+                    props['ev-click'] = null;
+                    children.props = props;
+                    this.set('children.0', children, {silent: true});
+                }
+            }
+        );
+        @Component({
+            selector: 'app-root',
+            template: `<k-test #test><k-child></k-child></k-test>`
+        })
+        class AppComponent {
+            @ViewChild('test', {static: true, read: TestComponent}) test;
+        }
+
+        const fixture = getFixture<AppComponent>([AppComponent, TestComponent, ChildComponent]);
+        const element = fixture.nativeElement;
+        const div = element.firstChild.firstChild;
+
+        div.click();
+        expect(onClick.calls.count()).toEqual(1);
+
+        const component = fixture.componentInstance;
+        component.test._removeEvent();
+        component.test.update();
+        div.click();
+        expect(onClick.calls.count()).toEqual(1);
     });
 
     it('should destroy Angular component', () => {

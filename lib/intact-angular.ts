@@ -10,7 +10,7 @@ import {decorate, BLOCK_NAME_PREFIX} from './decorate';
 import {getParentIntactInstance} from './helpers';
 
 const {h} = Intact.Vdt.miss;
-const {className: intactClassName} = Intact.Vdt.utils;
+const {className: intactClassName, isEventProp} = Intact.Vdt.utils;
 const {get, set} = Intact.utils;
 
 @Component({})
@@ -27,7 +27,7 @@ export class IntactAngular extends Intact {
     private __blocks__;
     private __parent__;
     private __context__;
-    private __appendQueueRef: {ref: any};
+    private __appendQueueRef: {ref: any, children: any};
     private mountedQueue;
     private _shouldTrigger;
     private __oldTriggerFlag;
@@ -66,7 +66,23 @@ export class IntactAngular extends Intact {
     init(lastVNode, nextVNode) {
         if (this._shouldUpdateProps && nextVNode) {
             const props = nextVNode.props;
-            Object.assign(this.props, props);
+            // only handle event, maybe we should call patchProps like Intact does,
+            // but it is unnecessary for now
+            for (let prop in props) {
+                const lastValue = this.props[prop];
+                const nextValue = props[prop];
+                if (lastValue === nextValue) continue;
+
+                if (isEventProp(prop)) {
+                    const eventName = prop.substr(3);
+                    if (lastValue) {
+                        (<any>this).off(eventName, lastValue);
+                    }
+                    (<any>this).on(eventName, nextValue);
+                }
+
+                this.props[prop] = nextValue;
+            }
         }
         return super.init(lastVNode, nextVNode);
     }
@@ -138,6 +154,7 @@ export class IntactAngular extends Intact {
         if (this._isAngular) {
             // maybe the parent that is Angular element has been destroyed by Angular
             if (this._hasDestroyedByAngular) return;
+
             (<any>this).vdt.destroy();
             (<any>this)._destroy(lastVNode, nextVNode);
             (<any>this).trigger('$destroyed', this);
@@ -163,7 +180,7 @@ export class IntactAngular extends Intact {
             const node = (<any>dom)._intactNode;
             if (node) {
                 node.instance.cancelAppendedQueue = true;
-                const vNode = h(node.instance, null, null, null, dom /* use dom as key */);
+                const vNode = h(node.instance);
                 // because we may change props in Intact component
                 // we set this flag to update props in `init` method
                 node.instance._shouldUpdateProps = true;
@@ -197,11 +214,11 @@ export class IntactAngular extends Intact {
         }
 
         const props = {
+            key: placeholder,
             ...intactNode.props,
             children,
             _blocks: this.__blocks__,
             _context: this.__context__,
-            key: placeholder,
         };
 
         this.vNode.props = props;
@@ -247,9 +264,13 @@ export class IntactAngular extends Intact {
 
             name = name.substring(BLOCK_NAME_PREFIX.length).replace(/_/g, '-');
             _blocks[name] = (__nouse__, ...args) => {
+                // check if it is a text node
+                const nodes = ref._def.element.template.nodes;
+                const isText = nodes.length === 1 && nodes[0].flags === 2;
                 return h(BlockWrapper, {
                     templateRef: ref, 
                     context: args,
+                    isText,
                 });
             };
         }
@@ -290,17 +311,30 @@ export class IntactAngular extends Intact {
                     // it indicates that another child has inited the queue
                     this.__appendQueueRef = parent.__appendQueueRef;
                 } else {
-                    parent.__appendQueueRef = this.__appendQueueRef = {ref: []};
+                    parent.__appendQueueRef = this.__appendQueueRef = {ref: [], children: []};
                 }
             } else {
-                this.__appendQueueRef = {ref: []};
+                this.__appendQueueRef = {ref: [], children: []};
             }
         } else if (parent) {
             // if parent has queue, we should merge them, then update the ref
             if (parent.__appendQueueRef && !parent.__appendQueueRef.ref.done) {
                 const queue = parent.__appendQueueRef.ref;
                 queue.push(...this.__appendQueueRef.ref);
+                
                 this.__appendQueueRef.ref = queue;
+                // should also update children's ref
+                const loop = (ref) => {
+                    const children = ref.children;
+                    for (let i = 0; i < children.length; i++) {
+                        let ref = children[i];
+                        ref.ref = queue;
+                        loop(ref);
+                    }
+                }
+                loop(this.__appendQueueRef);
+
+                parent.__appendQueueRef.children.push(this.__appendQueueRef);
             } else {
                 // otherwise we should update the parent's queue
                 parent.__appendQueueRef = this.__appendQueueRef;

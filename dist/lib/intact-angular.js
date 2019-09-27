@@ -5,8 +5,8 @@ import { Wrapper, BlockWrapper } from './wrapper';
 import { decorate, BLOCK_NAME_PREFIX } from './decorate';
 import { getParentIntactInstance } from './helpers';
 var h = Intact.Vdt.miss.h;
-var intactClassName = Intact.Vdt.utils.className;
-var _a = Intact.utils, get = _a.get, set = _a.set;
+var _a = Intact.Vdt.utils, intactClassName = _a.className, isEventProp = _a.isEventProp;
+var _b = Intact.utils, get = _b.get, set = _b.set;
 var IntactAngular = /** @class */ (function (_super) {
     tslib_1.__extends(IntactAngular, _super);
     function IntactAngular(elRef, viewContainerRef, injector, ngZone) {
@@ -43,7 +43,22 @@ var IntactAngular = /** @class */ (function (_super) {
     IntactAngular.prototype.init = function (lastVNode, nextVNode) {
         if (this._shouldUpdateProps && nextVNode) {
             var props = nextVNode.props;
-            Object.assign(this.props, props);
+            // only handle event, maybe we should call patchProps like Intact does,
+            // but it is unnecessary for now
+            for (var prop in props) {
+                var lastValue = this.props[prop];
+                var nextValue = props[prop];
+                if (lastValue === nextValue)
+                    continue;
+                if (isEventProp(prop)) {
+                    var eventName = prop.substr(3);
+                    if (lastValue) {
+                        this.off(eventName, lastValue);
+                    }
+                    this.on(eventName, nextValue);
+                }
+                this.props[prop] = nextValue;
+            }
         }
         return _super.prototype.init.call(this, lastVNode, nextVNode);
     };
@@ -128,7 +143,7 @@ var IntactAngular = /** @class */ (function (_super) {
             var node = dom._intactNode;
             if (node) {
                 node.instance.cancelAppendedQueue = true;
-                var vNode = h(node.instance, null, null, null, dom /* use dom as key */);
+                var vNode = h(node.instance);
                 // because we may change props in Intact component
                 // we set this flag to update props in `init` method
                 node.instance._shouldUpdateProps = true;
@@ -160,7 +175,7 @@ var IntactAngular = /** @class */ (function (_super) {
         if (intactNode.style) {
             intactNode.props.style = intactNode.style.style.cssText;
         }
-        var props = tslib_1.__assign({}, intactNode.props, { children: children, _blocks: this.__blocks__, _context: this.__context__, key: placeholder });
+        var props = tslib_1.__assign({ key: placeholder }, intactNode.props, { children: children, _blocks: this.__blocks__, _context: this.__context__ });
         this.vNode.props = props;
         return props;
     };
@@ -206,9 +221,13 @@ var IntactAngular = /** @class */ (function (_super) {
                 for (var _i = 1; _i < arguments.length; _i++) {
                     args[_i - 1] = arguments[_i];
                 }
+                // check if it is a text node
+                var nodes = ref._def.element.template.nodes;
+                var isText = nodes.length === 1 && nodes[0].flags === 2;
                 return h(BlockWrapper, {
                     templateRef: ref,
                     context: args,
+                    isText: isText,
                 });
             };
         };
@@ -255,19 +274,29 @@ var IntactAngular = /** @class */ (function (_super) {
                     this.__appendQueueRef = parent.__appendQueueRef;
                 }
                 else {
-                    parent.__appendQueueRef = this.__appendQueueRef = { ref: [] };
+                    parent.__appendQueueRef = this.__appendQueueRef = { ref: [], children: [] };
                 }
             }
             else {
-                this.__appendQueueRef = { ref: [] };
+                this.__appendQueueRef = { ref: [], children: [] };
             }
         }
         else if (parent) {
             // if parent has queue, we should merge them, then update the ref
             if (parent.__appendQueueRef && !parent.__appendQueueRef.ref.done) {
-                var queue = parent.__appendQueueRef.ref;
-                queue.push.apply(queue, tslib_1.__spread(this.__appendQueueRef.ref));
-                this.__appendQueueRef.ref = queue;
+                var queue_1 = parent.__appendQueueRef.ref;
+                queue_1.push.apply(queue_1, tslib_1.__spread(this.__appendQueueRef.ref));
+                this.__appendQueueRef.ref = queue_1;
+                var loop_1 = function (ref) {
+                    var children = ref.children;
+                    for (var i = 0; i < children.length; i++) {
+                        var ref_1 = children[i];
+                        ref_1.ref = queue_1;
+                        loop_1(ref_1);
+                    }
+                };
+                loop_1(this.__appendQueueRef);
+                parent.__appendQueueRef.children.push(this.__appendQueueRef);
             }
             else {
                 // otherwise we should update the parent's queue

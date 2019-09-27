@@ -80,6 +80,7 @@ var BlockWrapper = /** @class */ (function () {
             placeholder.appendChild(dom);
         });
     };
+    BlockWrapper.$id = 'AngularBlockWrapper';
     return BlockWrapper;
 }());
 export { BlockWrapper };

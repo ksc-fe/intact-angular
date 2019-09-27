@@ -64,6 +64,8 @@ export class BlockWrapper {
     private vNode;
     private viewRef;
 
+    static $id = 'AngularBlockWrapper';
+
     init(lastVNode, nextVNode) {
         this._render(nextVNode);
         return this.placeholder;
