@@ -9,6 +9,9 @@
 import {APP_ID, Inject, Injectable, Renderer2, RendererFactory2, RendererStyleFlags2, RendererType2, ViewEncapsulation} from '@angular/core';
 import {EventManager, ɵDomSharedStylesHost as DomSharedStylesHost} from '@angular/platform-browser';
 import {IntactNode, isIntactNode} from './intact-node';
+import Intact from 'intact/dist/index';
+
+const nextTick = Intact.utils.nextTick;
 
 export const NAMESPACE_URIS: {[ns: string]: string} = {
     'svg': 'http://www.w3.org/2000/svg',
@@ -333,9 +336,13 @@ class DefaultDomRenderer2 implements Renderer2 {
                 callback = function(c, v) {
                     // don't change the property, if this component has not been rendered
                     // otherwise it will throw ExpressionChangedAfterItHasBeenCheckedError
-                    if (this.rendered) {
-                        this.ngZone.run(() => _cb(v));
-                    }
+                    this.ngZone.run(() => {
+                        if (!this.rendered || this.__updating) {
+                            nextTick(() => _cb(v));
+                        } else {
+                            _cb(v);
+                        }
+                    });
                 } as (event: any) => boolean;
             } else {
                 if (event[0] === '$') {
@@ -343,9 +350,22 @@ class DefaultDomRenderer2 implements Renderer2 {
                     event = event.replace(/\-/, ':');
                 }
                 const _cb = callback;
+                const self = this;
                 callback = function(...args) {
-                    if (this.inited) {
-                        this.ngZone.run(() => _cb(args));
+                    if (this) {
+                        // if (this.inited) {
+                            this.ngZone.run(() => {
+                                if (!this.inited || this.__updating) {
+                                    nextTick(() => _cb(args));
+                                } else {
+                                    _cb(args);
+                                }
+                            });
+                        // }
+                    } else {
+                        (<any>self.eventManager)._zone.run(() => {
+                            _cb(args);
+                        });
                     }
                 } as (event: any) => boolean;
             }

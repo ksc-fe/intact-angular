@@ -1,11 +1,12 @@
 import Intact from 'intact/dist/index';
-import { ElementRef, ViewContainerRef, Injector, NgZone } from '@angular/core';
+import { ElementRef, ViewContainerRef, ChangeDetectorRef, Injector, NgZone } from '@angular/core';
 import { decorate } from './decorate';
 export declare class IntactAngular extends Intact {
     private elRef;
     private viewContainerRef;
     private injector;
     private ngZone;
+    private changeDetectorRef;
     static decorate: typeof decorate;
     vNode: any;
     props: any;
@@ -24,9 +25,11 @@ export declare class IntactAngular extends Intact {
     private __firstCheck;
     private _isAngular;
     private _hasDestroyedByAngular;
-    constructor(elRef: ElementRef, viewContainerRef: ViewContainerRef, injector: Injector, ngZone: NgZone);
+    private __updating;
+    constructor(elRef: ElementRef, viewContainerRef: ViewContainerRef, injector: Injector, ngZone: NgZone, changeDetectorRef: ChangeDetectorRef);
     _constructor(props: any): void;
     init(lastVNode: any, nextVNode: any): any;
+    update(...args: any[]): any;
     ngAfterViewInit(): void;
     ngAfterViewChecked(): boolean;
     destroy(lastVNode: any, nextVNode: any, parentDom: any): void;

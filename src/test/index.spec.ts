@@ -282,6 +282,30 @@ describe('Unit Tests', () => {
         expect(onClick).toHaveBeenCalledWith(['test'])
     });
 
+    it('should update when bind native event to Intact component', () => {
+        const TestComponent = createIntactAngularComponent(
+            `<div ev-click={self.get('ev-click')}>click {self.get('value')}</div>`,
+            `k-test`
+        );
+        @Component({
+            selector: 'app-root',
+            template: `<k-test (click)="onClick($event)" [value]="value"></k-test>`,
+        })
+        class AppComponent {
+            private value = 0;
+            onClick() {
+                this.value++;
+            }
+        }
+
+
+        const fixture = getFixture<AppComponent>([AppComponent, TestComponent]);
+        const element = fixture.nativeElement;
+        const component = fixture.componentInstance;
+        element.firstChild.click();
+        expect(element.innerHTML).toBe('<div>click 1</div>');
+    });
+
     it('should bind $change event', () => {
         const onClick = jasmine.createSpy();
         const TestComponent = createIntactAngularComponent(
@@ -752,11 +776,49 @@ describe('Unit Tests', () => {
 
         const fixture = getFixture<AppComponent>([AppComponent, SelectComponent, OptionComponent]);
         const component = fixture.componentInstance;
-        console.log(component.option.parentVNode);
         expect(component.option.parentVNode.parentVNode.tag).toBe(Wrapper);
+        expect(component.option.vNode.parentVNode.parentVNode.tag).toBe(Wrapper);
         component.value = 2;
         fixture.detectChanges();
+        expect(component.option.vNode.parentVNode.parentVNode.tag).toBe(Wrapper);
     });
+
+    // it('should get parentVNode when we cloned vNode in template', () => {
+        // const TestComponent = createIntactAngularComponent(
+            // `<div>{self.get('children').map(vNode => {
+                // return _Vdt.miss.clone(vNode);
+            // })}</div>`,
+            // `k-test`
+        // );
+
+        // @Component({
+            // selector: 'app-root',
+            // template: `
+                // <k-test #root>
+                    // <k-test>
+                        // <k-test>
+                            // <k-test>
+                                // <k-test #test>
+                                    // <span>option {{ value }}</span>
+                                // </k-test>
+                            // </k-test>
+                        // </k-test>
+                    // </k-test>
+                // </k-test>
+            // `
+        // })
+        // class AppComponent {
+            // value = 1;
+            // @ViewChild('test', {static: true, read: TestComponent}) test;
+            // @ViewChild('root', {static: true, read: TestComponent}) root;
+        // }
+
+        // const fixture = getFixture<AppComponent>([AppComponent, TestComponent]);
+        // const component = fixture.componentInstance;
+        // component.root.update();
+        // component.value = 2;
+        // fixture.detectChanges();
+    // });
 
     it('should handle children vNode in Intact template', () => {
         const GroupComponent = createIntactAngularComponent(
@@ -879,11 +941,11 @@ describe('Unit Tests', () => {
         component.a = 2;
         fixture.detectChanges();
         expect(ngOnInit.calls.count()).toEqual(1);
-        expect(ngAfterViewChecked.calls.count()).toEqual(3);
+        expect(ngAfterViewChecked.calls.count()).toEqual(2);
         expect(ngOnDestroy.calls.count()).toEqual(0);
         expect(beforeCreate.calls.count()).toEqual(1);
         expect(mount.calls.count()).toEqual(1);
-        expect(update.calls.count()).toEqual(2);
+        expect(update.calls.count()).toEqual(1);
         expect(destroy.calls.count()).toEqual(0);
         // ItemComponent
         expect(methods._beforeCreate.calls.count()).toEqual(1);
@@ -1166,5 +1228,11 @@ describe('Unit Tests', () => {
         const element = fixture.nativeElement;
         expect(element.innerHTML).toBe('<div>0</div>');
         expect((<any>component).value).toBe(undefined);
+
+        // update
+        (<any>component).value = 2;
+        fixture.detectChanges();
+        expect(element.innerHTML).toBe('<div>0</div>');
+        expect((<any>component).value).toBe(2);
     });
 });

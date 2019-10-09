@@ -1,6 +1,6 @@
 import * as tslib_1 from "tslib";
 import Intact from 'intact/dist/index';
-import { Component, ElementRef, ViewContainerRef, TemplateRef, Injector, NgZone, } from '@angular/core';
+import { Component, ElementRef, ViewContainerRef, ChangeDetectorRef, TemplateRef, Injector, NgZone, } from '@angular/core';
 import { Wrapper, BlockWrapper } from './wrapper';
 import { decorate, BLOCK_NAME_PREFIX } from './decorate';
 import { getParentIntactInstance } from './helpers';
@@ -9,18 +9,22 @@ var _a = Intact.Vdt.utils, intactClassName = _a.className, isEventProp = _a.isEv
 var _b = Intact.utils, get = _b.get, set = _b.set;
 var IntactAngular = /** @class */ (function (_super) {
     tslib_1.__extends(IntactAngular, _super);
-    function IntactAngular(elRef, viewContainerRef, injector, ngZone) {
+    function IntactAngular(elRef, viewContainerRef, injector, ngZone, 
+    // private applicationRef: ApplicationRef,
+    changeDetectorRef) {
         var _this = _super.call(this) || this;
         _this.elRef = elRef;
         _this.viewContainerRef = viewContainerRef;
         _this.injector = injector;
         _this.ngZone = ngZone;
+        _this.changeDetectorRef = changeDetectorRef;
         _this.cancelAppendedQueue = false;
         _this._allowConstructor = false;
         _this._shouldUpdateProps = false;
         _this.__firstCheck = true;
         _this._isAngular = false;
         _this._hasDestroyedByAngular = false;
+        _this.__updating = false;
         if (elRef instanceof ElementRef) {
             _this._isAngular = true;
             // is called in Angular
@@ -61,6 +65,17 @@ var IntactAngular = /** @class */ (function (_super) {
             }
         }
         return _super.prototype.init.call(this, lastVNode, nextVNode);
+    };
+    IntactAngular.prototype.update = function () {
+        var args = [];
+        for (var _i = 0; _i < arguments.length; _i++) {
+            args[_i] = arguments[_i];
+        }
+        var updating = this.__updating;
+        this.__updating = true;
+        var ret = _super.prototype.update.apply(this, tslib_1.__spread(args));
+        this.__updating = updating;
+        return ret;
     };
     IntactAngular.prototype.ngAfterViewInit = function () {
         var _this = this;
@@ -177,6 +192,7 @@ var IntactAngular = /** @class */ (function (_super) {
         }
         var props = tslib_1.__assign({ key: placeholder }, intactNode.props, { children: children, _blocks: this.__blocks__, _context: this.__context__ });
         this.vNode.props = props;
+        this.vNode.key = props.key;
         return props;
     };
     IntactAngular.prototype._normalizeContext = function () {
@@ -287,6 +303,7 @@ var IntactAngular = /** @class */ (function (_super) {
                 var queue_1 = parent.__appendQueueRef.ref;
                 queue_1.push.apply(queue_1, tslib_1.__spread(this.__appendQueueRef.ref));
                 this.__appendQueueRef.ref = queue_1;
+                // should also update children's ref
                 var loop_1 = function (ref) {
                     var children = ref.children;
                     for (var i = 0; i < children.length; i++) {
@@ -346,7 +363,8 @@ var IntactAngular = /** @class */ (function (_super) {
         tslib_1.__metadata("design:paramtypes", [ElementRef,
             ViewContainerRef,
             Injector,
-            NgZone])
+            NgZone,
+            ChangeDetectorRef])
     ], IntactAngular);
     return IntactAngular;
 }(Intact));

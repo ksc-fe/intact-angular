@@ -35,6 +35,7 @@ export class IntactAngular extends Intact {
     private __firstCheck = true;
     private _isAngular = false;
     private _hasDestroyedByAngular = false;
+    private __updating = false;
 
     constructor(
         private elRef: ElementRef,
@@ -42,7 +43,7 @@ export class IntactAngular extends Intact {
         private injector: Injector,
         private ngZone: NgZone,
         // private applicationRef: ApplicationRef,
-        // private changeDetectorRef: ChangeDetectorRef,
+        private changeDetectorRef: ChangeDetectorRef,
     ) {
         super();
 
@@ -85,6 +86,14 @@ export class IntactAngular extends Intact {
             }
         }
         return super.init(lastVNode, nextVNode);
+    }
+
+    update(...args) {
+        const updating = this.__updating;
+        this.__updating = true;
+        const ret = super.update(...args);
+        this.__updating = updating;
+        return ret;
     }
 
     ngAfterViewInit() {
@@ -222,6 +231,7 @@ export class IntactAngular extends Intact {
         };
 
         this.vNode.props = props;
+        this.vNode.key = props.key;
 
         return props;
     }

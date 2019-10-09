@@ -9,6 +9,8 @@ import * as tslib_1 from "tslib";
 import { APP_ID, Inject, Injectable, RendererStyleFlags2, ViewEncapsulation } from '@angular/core';
 import { EventManager, ɵDomSharedStylesHost as DomSharedStylesHost } from '@angular/platform-browser';
 import { IntactNode } from './intact-node';
+import Intact from 'intact/dist/index';
+var nextTick = Intact.utils.nextTick;
 export var NAMESPACE_URIS = {
     'svg': 'http://www.w3.org/2000/svg',
     'xhtml': 'http://www.w3.org/1999/xhtml',
@@ -314,11 +316,17 @@ var DefaultDomRenderer2 = /** @class */ (function () {
                 event = "$change:" + event.slice(0, -6);
                 var _cb_1 = callback;
                 callback = function (c, v) {
+                    var _this = this;
                     // don't change the property, if this component has not been rendered
                     // otherwise it will throw ExpressionChangedAfterItHasBeenCheckedError
-                    if (this.rendered) {
-                        this.ngZone.run(function () { return _cb_1(v); });
-                    }
+                    this.ngZone.run(function () {
+                        if (!_this.rendered || _this.__updating) {
+                            nextTick(function () { return _cb_1(v); });
+                        }
+                        else {
+                            _cb_1(v);
+                        }
+                    });
                 };
             }
             else {
@@ -327,13 +335,29 @@ var DefaultDomRenderer2 = /** @class */ (function () {
                     event = event.replace(/\-/, ':');
                 }
                 var _cb_2 = callback;
+                var self_1 = this;
                 callback = function () {
+                    var _this = this;
                     var args = [];
                     for (var _i = 0; _i < arguments.length; _i++) {
                         args[_i] = arguments[_i];
                     }
-                    if (this.inited) {
-                        this.ngZone.run(function () { return _cb_2(args); });
+                    if (this) {
+                        // if (this.inited) {
+                        this.ngZone.run(function () {
+                            if (!_this.inited || _this.__updating) {
+                                nextTick(function () { return _cb_2(args); });
+                            }
+                            else {
+                                _cb_2(args);
+                            }
+                        });
+                        // }
+                    }
+                    else {
+                        self_1.eventManager._zone.run(function () {
+                            _cb_2(args);
+                        });
                     }
                 };
             }
