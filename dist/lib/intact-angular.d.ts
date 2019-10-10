@@ -26,18 +26,17 @@ export declare class IntactAngular extends Intact {
     private _isAngular;
     private _hasDestroyedByAngular;
     private __updating;
+    private _willUpdate;
     constructor(elRef: ElementRef, viewContainerRef: ViewContainerRef, injector: Injector, ngZone: NgZone, changeDetectorRef: ChangeDetectorRef);
     _constructor(props: any): void;
     init(lastVNode: any, nextVNode: any): any;
     update(...args: any[]): any;
+    ngDoCheck(): void;
     ngAfterViewInit(): void;
     ngAfterViewChecked(): boolean;
     destroy(lastVNode: any, nextVNode: any, parentDom: any): void;
     ngOnDestroy(): void;
     _normalizeProps(): {
-        children: any[];
-        _blocks: any;
-        _context: any;
         key: any;
     };
     _normalizeContext(): void;

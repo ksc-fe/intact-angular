@@ -27,7 +27,7 @@ export class IntactAngular extends Intact {
     private __blocks__;
     private __parent__;
     private __context__;
-    private __appendQueueRef: {ref: any, children: any};
+    private __appendQueue;
     private mountedQueue;
     private _shouldTrigger;
     private __oldTriggerFlag;
@@ -36,6 +36,7 @@ export class IntactAngular extends Intact {
     private _isAngular = false;
     private _hasDestroyedByAngular = false;
     private __updating = false;
+    private _willUpdate = false;
 
     constructor(
         private elRef: ElementRef,
@@ -96,10 +97,17 @@ export class IntactAngular extends Intact {
         return ret;
     }
 
-    ngAfterViewInit() {
-        const parent = this.__parent__ =  this._findParentIntactComponent();
-
+    ngDoCheck() {
+        console.log('ngDoCheck', (<any>this).uniqueId, this);
+        this.__parent__ =  this._findParentIntactComponent();
         this._initAppendQueue();
+        this._willUpdate = true;
+    }
+
+    ngAfterViewInit() {
+        console.log('ngAfterViewInit', (<any>this).uniqueId, this);
+        const parent = this.__parent__;
+
 
         const placeholder = this._placeholder = this.elRef.nativeElement;
         this._normalizeBlocks();
@@ -108,7 +116,7 @@ export class IntactAngular extends Intact {
         const props = this._normalizeProps();
         this._constructor(props);
 
-        this.__appendQueueRef.ref.push(() => {
+        this.__appendQueue.push(() => {
             if (this.cancelAppendedQueue) return;
 
             this.__updateParentVNode();
@@ -131,6 +139,7 @@ export class IntactAngular extends Intact {
     }
 
     ngAfterViewChecked() {
+        console.log('ngAfterViewChecked', (<any>this).uniqueId, this);
         // we can not ignore the first checked, because it may update block
         // TODO: we have called detectChanges for first time render block
         // so can we ignore the first check?
@@ -138,13 +147,13 @@ export class IntactAngular extends Intact {
         // if (this.cancelAppendedQueue || !this.vNode.dom) return;
         if (!this.vNode.dom) return;
 
-        this._initAppendQueue();
+        // this._initAppendQueue();
 
         const lastVNode = this.vNode;
         this._initVNode();
         this._normalizeProps();
 
-        this.__appendQueueRef.ref.push(() => {
+        this.__appendQueue.push(() => {
             if (this.cancelAppendedQueue) return;
 
             this.__updateParentVNode();
@@ -222,13 +231,25 @@ export class IntactAngular extends Intact {
             (<any>intactNode.props).style = intactNode.style.style.cssText;
         }
 
+        // handle prop value which is TemplateRef
         const props = {
-            key: placeholder,
-            ...intactNode.props,
+            key: placeholder
+        };
+        for (let propName in intactNode.props) {
+            let prop = intactNode.props[propName];
+            if (prop instanceof TemplateRef) {
+                prop = h(BlockWrapper, {
+                    templateRef: prop,
+                    ngZone: this.ngZone,
+                });
+            }
+            props[propName] = prop;
+        }
+        Object.assign(props, {
             children,
             _blocks: this.__blocks__,
             _context: this.__context__,
-        };
+        });
 
         this.vNode.props = props;
         this.vNode.key = props.key;
@@ -281,6 +302,7 @@ export class IntactAngular extends Intact {
                     templateRef: ref, 
                     context: args,
                     isText,
+                    ngZone: this.ngZone,
                 });
             };
         }
@@ -296,6 +318,7 @@ export class IntactAngular extends Intact {
                     const instance = getParentIntactInstance(searchView, elDef, IntactAngular);
                     if (instance) return instance;
                     elDef = elDef.parent;
+                    // if (!elDef) return;
                     if (!elDef) break;
                 }
             }
@@ -315,50 +338,26 @@ export class IntactAngular extends Intact {
 
     _initAppendQueue() {
         const parent = this.__parent__;
-        if (!this.__appendQueueRef || this.__appendQueueRef.ref.done) {
-            if (parent) {
-                if (parent.__appendQueueRef && !parent.__appendQueueRef.ref.done) {
-                    // it indicates that another child has inited the queue
-                    this.__appendQueueRef = parent.__appendQueueRef;
-                } else {
-                    parent.__appendQueueRef = this.__appendQueueRef = {ref: [], children: []};
-                }
-            } else {
-                this.__appendQueueRef = {ref: [], children: []};
-            }
-        } else if (parent) {
-            // if parent has queue, we should merge them, then update the ref
-            if (parent.__appendQueueRef && !parent.__appendQueueRef.ref.done) {
-                const queue = parent.__appendQueueRef.ref;
-                queue.push(...this.__appendQueueRef.ref);
-                
-                this.__appendQueueRef.ref = queue;
-                // should also update children's ref
-                const loop = (ref) => {
-                    const children = ref.children;
-                    for (let i = 0; i < children.length; i++) {
-                        let ref = children[i];
-                        ref.ref = queue;
-                        loop(ref);
-                    }
-                }
-                loop(this.__appendQueueRef);
-
-                parent.__appendQueueRef.children.push(this.__appendQueueRef);
-            } else {
-                // otherwise we should update the parent's queue
-                parent.__appendQueueRef = this.__appendQueueRef;
-            }
+        if (!parent || parent.__appendQueue.done) {
+            this.__appendQueue = [];
+        } else {
+            this.__appendQueue = parent.__appendQueue;
         }
     }
 
     _triggerAppendQueue() {
-        if (!this.__parent__) {
+        const parent = this.__parent__;
+        if (!parent) {
+            this._willUpdate = false;
+        } else {
+            this._willUpdate = parent._willUpdate;
+        }
+        if (!parent || !parent._willUpdate) {
             let cb;
-            while (cb = this.__appendQueueRef.ref.pop()) {
+            while (cb = this.__appendQueue.pop()) {
                 cb();
             }
-            this.__appendQueueRef.ref.done = true;
+            this.__appendQueue.done = true;
         }
     }
 

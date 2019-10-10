@@ -71,13 +71,16 @@ var BlockWrapper = /** @class */ (function () {
         this.viewRef.destroy();
     };
     BlockWrapper.prototype._render = function (vNode) {
+        var _this = this;
         var placeholder = this.placeholder = document.createElement('intact-content');
-        var _a = this.vNode.props, templateRef = _a.templateRef, context = _a.context;
-        var viewRef = this.viewRef = templateRef.createEmbeddedView({ args: context });
-        // for call lifecycle methods
-        this.viewRef.detectChanges();
-        viewRef.rootNodes.forEach(function (dom) {
-            placeholder.appendChild(dom);
+        var _a = this.vNode.props, templateRef = _a.templateRef, context = _a.context, ngZone = _a.ngZone;
+        ngZone.run(function () {
+            var viewRef = _this.viewRef = templateRef.createEmbeddedView({ args: context });
+            // for call lifecycle methods
+            _this.viewRef.detectChanges();
+            viewRef.rootNodes.forEach(function (dom) {
+                placeholder.appendChild(dom);
+            });
         });
     };
     BlockWrapper.$id = 'AngularBlockWrapper';

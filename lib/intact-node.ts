@@ -1,5 +1,3 @@
-export type StringMap<T = any> = {[index: string]: T};
-
 export class IntactNode {
     public props = {};
     public children: Array<HTMLElement> = [];

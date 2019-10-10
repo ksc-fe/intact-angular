@@ -84,12 +84,14 @@ export class BlockWrapper {
 
     _render(vNode) {
         const placeholder = this.placeholder = document.createElement('intact-content');
-        const {templateRef, context} = this.vNode.props;
-        const viewRef = this.viewRef = templateRef.createEmbeddedView({args: context});
-        // for call lifecycle methods
-        this.viewRef.detectChanges();
-        viewRef.rootNodes.forEach(dom => {
-            placeholder.appendChild(dom);
+        const {templateRef, context, ngZone} = this.vNode.props;
+        ngZone.run(() => {
+            const viewRef = this.viewRef = templateRef.createEmbeddedView({args: context});
+            // for call lifecycle methods
+            this.viewRef.detectChanges();
+            viewRef.rootNodes.forEach(dom => {
+                placeholder.appendChild(dom);
+            });
         });
     }
 }

@@ -139,6 +139,34 @@ describe('Unit Tests', () => {
         expect(element.innerHTML).toBe("<div><div><intact-content><b>hidden</b></intact-content></div><div><intact-content><b>hidden</b></intact-content></div></div>");
     });
 
+    it('should render templateRef', () => {
+        const TestComponent = createIntactAngularComponent(
+            `<div>{self.get('template')}</div>`,
+            `k-test`
+        );
+
+        @Component({
+            selector: 'app-root',
+            template: `
+                <k-test [template]="test"></k-test>
+                <ng-template #test><div (click)="onClick()">test {{ value }}</div></ng-template>
+            `
+        })
+        class AppComponent {
+            private value = 1;
+            onClick() {
+                this.value++;
+            }
+        }
+
+        const fixture = getFixture([AppComponent, TestComponent]);
+        const element = fixture.nativeElement;
+        expect(element.innerHTML).toBe('<div><intact-content><div>test 1</div></intact-content></div>');
+
+        element.firstChild.firstChild.firstChild.click();
+        expect(element.innerHTML).toBe('<div><intact-content><div>test 2</div></intact-content></div>');
+    });
+
     it('should update children', () => {
         @Component({
             selector: 'app-root',
@@ -1234,5 +1262,51 @@ describe('Unit Tests', () => {
         fixture.detectChanges();
         expect(element.innerHTML).toBe('<div>0</div>');
         expect((<any>component).value).toBe(2);
+    });
+
+    it('should treat component in block as root element', () => {
+        const TestComponent = createIntactAngularComponent(
+            `<div><b:template args={[self.get('test')]} /></div>`,
+            `k-test`,
+            {
+                defaults() {
+                    return {test: 'a'};
+                }
+            },
+            ['template']
+        );
+
+        @Component({
+            selector: 'app-root',
+            template: `
+                <k-test #test>
+                    <ng-template #template let-data="args[0]">
+                        <div (click)="onClick()">
+                            <k-children>test {{ value }} {{ data }}</k-children>
+                        </div>
+                    </ng-template>
+                </k-test>
+            `
+        })
+        class AppComponent {
+            @ViewChild('test', {static: true}) test;
+            private value = 1;
+            onClick() {
+                this.value++;
+            }
+        }
+
+        const fixture = getFixture<AppComponent>([AppComponent, TestComponent, IntactChildrenComponent]);
+        const element = fixture.nativeElement;
+        const component = fixture.componentInstance;
+
+        element.firstChild.firstChild.firstChild.click();
+        expect(element.innerHTML).toBe('<div><intact-content><div><div>test 2 a</div></div></intact-content></div>');
+
+        component.test.set('test', 'b');
+        expect(element.innerHTML).toBe('<div><intact-content><div><div>test 2 b</div></div></intact-content></div>');
+
+        element.firstChild.firstChild.firstChild.click();
+        expect(element.innerHTML).toBe('<div><intact-content><div><div>test 3 b</div></div></intact-content></div>');
     });
 });

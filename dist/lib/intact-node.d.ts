@@ -1,6 +1,3 @@
-export declare type StringMap<T = any> = {
-    [index: string]: T;
-};
 export declare class IntactNode {
     props: {};
     children: Array<HTMLElement>;
