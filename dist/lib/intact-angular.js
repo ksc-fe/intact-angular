@@ -79,14 +79,14 @@ var IntactAngular = /** @class */ (function (_super) {
         return ret;
     };
     IntactAngular.prototype.ngDoCheck = function () {
-        console.log('ngDoCheck', this.uniqueId, this);
+        // console.log('ngDoCheck', (<any>this).uniqueId, this);
         this.__parent__ = this._findParentIntactComponent();
         this._initAppendQueue();
         this._willUpdate = true;
     };
     IntactAngular.prototype.ngAfterViewInit = function () {
         var _this = this;
-        console.log('ngAfterViewInit', this.uniqueId, this);
+        // console.log('ngAfterViewInit', (<any>this).uniqueId, this);
         var parent = this.__parent__;
         var placeholder = this._placeholder = this.elRef.nativeElement;
         this._normalizeBlocks();
@@ -94,7 +94,8 @@ var IntactAngular = /** @class */ (function (_super) {
         this._allowConstructor = true;
         var props = this._normalizeProps();
         this._constructor(props);
-        this.__appendQueueRef.ref.push(function () {
+        this.__appendQueue.push(function () {
+            _this._willUpdate = false;
             if (_this.cancelAppendedQueue)
                 return;
             _this.__updateParentVNode();
@@ -113,7 +114,7 @@ var IntactAngular = /** @class */ (function (_super) {
     };
     IntactAngular.prototype.ngAfterViewChecked = function () {
         var _this = this;
-        console.log('ngAfterViewChecked', this.uniqueId, this);
+        // console.log('ngAfterViewChecked', (<any>this).uniqueId, this);
         // we can not ignore the first checked, because it may update block
         // TODO: we have called detectChanges for first time render block
         // so can we ignore the first check?
@@ -126,7 +127,8 @@ var IntactAngular = /** @class */ (function (_super) {
         var lastVNode = this.vNode;
         this._initVNode();
         this._normalizeProps();
-        this.__appendQueueRef.ref.push(function () {
+        this.__appendQueue.push(function () {
+            _this._willUpdate = false;
             if (_this.cancelAppendedQueue)
                 return;
             _this.__updateParentVNode();
@@ -312,45 +314,12 @@ var IntactAngular = /** @class */ (function (_super) {
     };
     IntactAngular.prototype._initAppendQueue = function () {
         var parent = this.__parent__;
-        if (!parent || parent.__appendQueueRef.ref.done) {
-            this.__appendQueueRef = { ref: [], children: [] };
+        if (!parent || parent.__appendQueue.done) {
+            this.__appendQueue = [];
         }
         else {
-            this.__appendQueueRef = parent.__appendQueueRef;
+            this.__appendQueue = parent.__appendQueue;
         }
-        // if (!this.__appendQueueRef || this.__appendQueueRef.ref.done) {
-        // if (parent) {
-        // if (parent.__appendQueueRef && !parent.__appendQueueRef.ref.done) {
-        // // it indicates that another child has inited the queue
-        // this.__appendQueueRef = parent.__appendQueueRef;
-        // } else {
-        // parent.__appendQueueRef = this.__appendQueueRef = {ref: [], children: []};
-        // }
-        // } else {
-        // this.__appendQueueRef = {ref: [], children: []};
-        // }
-        // } else if (parent) {
-        // // if parent has queue, we should merge them, then update the ref
-        // if (parent.__appendQueueRef && !parent.__appendQueueRef.ref.done) {
-        // const queue = parent.__appendQueueRef.ref;
-        // queue.push(...this.__appendQueueRef.ref);
-        // this.__appendQueueRef.ref = queue;
-        // // should also update children's ref
-        // const loop = (ref) => {
-        // const children = ref.children;
-        // for (let i = 0; i < children.length; i++) {
-        // let ref = children[i];
-        // ref.ref = queue;
-        // loop(ref);
-        // }
-        // }
-        // loop(this.__appendQueueRef);
-        // parent.__appendQueueRef.children.push(this.__appendQueueRef);
-        // } else {
-        // // otherwise we should update the parent's queue
-        // parent.__appendQueueRef = this.__appendQueueRef;
-        // }
-        // }
     };
     IntactAngular.prototype._triggerAppendQueue = function () {
         var parent = this.__parent__;
@@ -362,10 +331,10 @@ var IntactAngular = /** @class */ (function (_super) {
         }
         if (!parent || !parent._willUpdate) {
             var cb = void 0;
-            while (cb = this.__appendQueueRef.ref.pop()) {
+            while (cb = this.__appendQueue.pop()) {
                 cb();
             }
-            this.__appendQueueRef.ref.done = true;
+            this.__appendQueue.done = true;
         }
     };
     IntactAngular.prototype.__updateParentVNode = function () {

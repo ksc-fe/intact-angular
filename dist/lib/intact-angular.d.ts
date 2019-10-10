@@ -17,7 +17,7 @@ export declare class IntactAngular extends Intact {
     private __blocks__;
     private __parent__;
     private __context__;
-    private __appendQueueRef;
+    private __appendQueue;
     private mountedQueue;
     private _shouldTrigger;
     private __oldTriggerFlag;

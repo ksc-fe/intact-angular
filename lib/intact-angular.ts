@@ -98,14 +98,14 @@ export class IntactAngular extends Intact {
     }
 
     ngDoCheck() {
-        console.log('ngDoCheck', (<any>this).uniqueId, this);
+        // console.log('ngDoCheck', (<any>this).uniqueId, this);
         this.__parent__ =  this._findParentIntactComponent();
         this._initAppendQueue();
         this._willUpdate = true;
     }
 
     ngAfterViewInit() {
-        console.log('ngAfterViewInit', (<any>this).uniqueId, this);
+        // console.log('ngAfterViewInit', (<any>this).uniqueId, this);
         const parent = this.__parent__;
 
 
@@ -117,6 +117,7 @@ export class IntactAngular extends Intact {
         this._constructor(props);
 
         this.__appendQueue.push(() => {
+            this._willUpdate = false;
             if (this.cancelAppendedQueue) return;
 
             this.__updateParentVNode();
@@ -139,7 +140,7 @@ export class IntactAngular extends Intact {
     }
 
     ngAfterViewChecked() {
-        console.log('ngAfterViewChecked', (<any>this).uniqueId, this);
+        // console.log('ngAfterViewChecked', (<any>this).uniqueId, this);
         // we can not ignore the first checked, because it may update block
         // TODO: we have called detectChanges for first time render block
         // so can we ignore the first check?
@@ -154,6 +155,7 @@ export class IntactAngular extends Intact {
         this._normalizeProps();
 
         this.__appendQueue.push(() => {
+            this._willUpdate = false;
             if (this.cancelAppendedQueue) return;
 
             this.__updateParentVNode();
