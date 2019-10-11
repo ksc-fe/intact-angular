@@ -25,12 +25,10 @@ export declare class IntactAngular extends Intact {
     private __firstCheck;
     private _isAngular;
     private _hasDestroyedByAngular;
-    private __updating;
     private _willUpdate;
     constructor(elRef: ElementRef, viewContainerRef: ViewContainerRef, injector: Injector, ngZone: NgZone, changeDetectorRef: ChangeDetectorRef);
     _constructor(props: any): void;
     init(lastVNode: any, nextVNode: any): any;
-    update(...args: any[]): any;
     ngDoCheck(): void;
     ngAfterViewInit(): void;
     ngAfterViewChecked(): boolean;

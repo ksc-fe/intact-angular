@@ -344,7 +344,7 @@ class DefaultDomRenderer2 implements Renderer2 {
                     // don't change the property, if this component has not been rendered
                     // otherwise it will throw ExpressionChangedAfterItHasBeenCheckedError
                     this.ngZone.run(() => {
-                        if (!this.rendered || this.__updating) {
+                        if (!this.rendered/* || this.__updating */) {
                             nextTick(() => _cb(v));
                         } else {
                             _cb(v);
@@ -362,7 +362,7 @@ class DefaultDomRenderer2 implements Renderer2 {
                     if (this) {
                         // if (this.inited) {
                             this.ngZone.run(() => {
-                                if (!this.inited || this.__updating) {
+                                if (!this.inited /* || this.__updating */) {
                                     nextTick(() => _cb(args));
                                 } else {
                                     _cb(args);

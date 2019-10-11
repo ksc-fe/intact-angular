@@ -14,6 +14,10 @@ import {functionalWrapper} from '../../lib/functional';
 const IntactChildrenComponent = createIntactAngularComponent(`<div>{self.get('children')}</div>`, 'k-children');
 const AngularChildrenComponent = createAngularComponent(`<div><ng-content></ng-content></div>`, 'app-children');
 
+const wait = () => new Promise((resolve) => {
+    setTimeout(resolve);
+});
+
 describe('Unit Tests', () => {
     function expect(input) {
         if (typeof input === 'string') {
@@ -100,7 +104,7 @@ describe('Unit Tests', () => {
         expect(element.innerHTML).toBe("<div><app-component><div>test</div></app-component></div>");
     });
 
-    it('should render cloned child', () => {
+    it('should render cloned child', async () => {
         const ChildrenComponent = createIntactAngularComponent(
             `<div>{self.get('children')}{self.get('children').map(vNode => {
                 return _Vdt.miss.clone(vNode, null, true);
@@ -136,10 +140,11 @@ describe('Unit Tests', () => {
         const component = fixture.componentInstance;
         component.show = false;
         fixture.detectChanges();
+        await wait();
         expect(element.innerHTML).toBe("<div><div><intact-content><b>hidden</b></intact-content></div><div><intact-content><b>hidden</b></intact-content></div></div>");
     });
 
-    it('should render templateRef', () => {
+    it('should render templateRef', async () => {
         const TestComponent = createIntactAngularComponent(
             `<div>{self.get('template')}</div>`,
             `k-test`
@@ -164,10 +169,11 @@ describe('Unit Tests', () => {
         expect(element.innerHTML).toBe('<div><intact-content><div>test 1</div></intact-content></div>');
 
         element.firstChild.firstChild.firstChild.click();
+        await wait();
         expect(element.innerHTML).toBe('<div><intact-content><div>test 2</div></intact-content></div>');
     });
 
-    it('should update children', () => {
+    it('should update children', async () => {
         @Component({
             selector: 'app-root',
             template: `<k-children>
@@ -186,10 +192,11 @@ describe('Unit Tests', () => {
 
         component.show = false;
         fixture.detectChanges();
+        await wait();
         expect(element.innerHTML).toBe('<div><b>hidden</b></div>');
     });
 
-    it('should update children which are nested Intact component', () => {
+    it('should update children which are nested Intact component', async () => {
         @Component({
             selector: 'app-root',
             template: `<k-children>
@@ -210,6 +217,7 @@ describe('Unit Tests', () => {
 
         component.show = false;
         fixture.detectChanges();
+        await wait();
         expect(element.innerHTML).toBe("<div><div><b>hidden</b></div></div>");
 
         component.show = true;
@@ -249,7 +257,7 @@ describe('Unit Tests', () => {
         expect(element.innerHTML).toBe('<div>test test</div>');
     });
 
-    it('should update props', () => {
+    it('should update props', async () => {
         const TestComponent = createIntactAngularComponent(`<div>{self.get('type')}</div>`, 'k-test');
         @Component({
             selector: 'app-root',
@@ -266,6 +274,7 @@ describe('Unit Tests', () => {
 
         component.type = 'danger';
         fixture.detectChanges();
+        await wait();
         expect(element.innerHTML).toBe('<div>danger</div>');
     });
 
@@ -310,7 +319,7 @@ describe('Unit Tests', () => {
         expect(onClick).toHaveBeenCalledWith(['test'])
     });
 
-    it('should update when bind native event to Intact component', () => {
+    it('should update when bind native event to Intact component', async () => {
         const TestComponent = createIntactAngularComponent(
             `<div ev-click={self.get('ev-click')}>click {self.get('value')}</div>`,
             `k-test`
@@ -331,6 +340,7 @@ describe('Unit Tests', () => {
         const element = fixture.nativeElement;
         const component = fixture.componentInstance;
         element.firstChild.click();
+        await wait();
         expect(element.innerHTML).toBe('<div>click 1</div>');
     });
 
@@ -358,7 +368,7 @@ describe('Unit Tests', () => {
         expect(onClick.calls.argsFor(0)[0][1]).toBe(1);
     });
 
-    it('should render basic blocks', () => {
+    it('should render basic blocks', async () => {
         const TestComponent = createIntactAngularComponent(
             `<div>
                 <b:prefix>prefix</b:prefix>
@@ -395,10 +405,12 @@ describe('Unit Tests', () => {
 
         component.show = false;
         fixture.detectChanges();
+        await wait();
         expect(element.innerHTML).toBe('<div><intact-content>begin</intact-content><div>children</div><div><intact-content><b>!</b></intact-content></div><intact-content></intact-content>nouse</div>');
 
         component.show = true;
         fixture.detectChanges();
+        await wait();
         expect(element.innerHTML).toBe('<div><intact-content>begin</intact-content><div>children</div><div><intact-content><span>end</span><b>!</b></intact-content></div><intact-content></intact-content>nouse</div>');
     });
 
@@ -459,7 +471,7 @@ describe('Unit Tests', () => {
         expect(element.innerHTML).toBe("<div><intact-content><div>test</div></intact-content></div><div><span><intact-content>test test</intact-content></span></div>");
     });
 
-    it('should render scope blocks', () => {
+    it('should render scope blocks', async () => {
         const TestComponent = createIntactAngularComponent(
             `<div>
                 <div v-for={self.get('data')}>
@@ -492,10 +504,12 @@ describe('Unit Tests', () => {
         const component = fixture.componentInstance;
         component.data[0].name = 'ccc';
         fixture.detectChanges();
+        await wait();
         expect(element.innerHTML).toBe("<div><div><intact-content><div>ccc</div></intact-content></div><div><intact-content><div>bbb</div></intact-content></div></div>");
 
         component.data = [{name: 'ddd'}];
         fixture.detectChanges();
+        await wait();
         expect(element.innerHTML).toBe("<div><div><intact-content><div>ddd</div></intact-content></div></div>");
 
         component.test.set('data', [{name: 'eee'}]);
@@ -564,7 +578,7 @@ describe('Unit Tests', () => {
         expect(element.innerHTML).toBe("<div><div><div>1</div><intact-content><div>test 1</div></intact-content></div><div><div>2</div><intact-content><div>test 2</div></intact-content></div></div>");
     });
 
-    it('should handle text node directly', () => {
+    it('should handle text node directly', async () => {
         const TestComponent = createIntactAngularComponent(
             `
                 <div>
@@ -594,10 +608,11 @@ describe('Unit Tests', () => {
         const component = fixture.componentInstance;
         component.value = '';
         fixture.detectChanges();
+        await wait();
         expect(element.innerHTML).toBe('<div><span>a</span><b>b</b><span></span><i>c</i></div>');
     });
 
-    it('should get contenxt in Intact functional component', () => {
+    it('should get contenxt in Intact functional component', async () => {
         const {h} = (<any>Intact).Vdt.miss;
         const FunctionalComponent = functionalWrapper(function(props) {
             const data = props._context.data;
@@ -625,10 +640,11 @@ describe('Unit Tests', () => {
         expect(element.innerHTML).toBe('<div>1</div><div><div>1</div></div>');
 
         element.firstChild.click();
+        await wait();
         expect(element.innerHTML).toBe('<div>2</div><div><div>2</div></div>');
     });
 
-    it('should get context in functional component that nests in ngFor', () => {
+    it('should get context in functional component that nests in ngFor', async () => {
         const {h} = (<any>Intact).Vdt.miss;
         const FunctionalComponent = functionalWrapper(function(props) {
             const data = props._context.data;
@@ -653,6 +669,7 @@ describe('Unit Tests', () => {
         expect(element.innerHTML).toBe('<div>1</div><div>1</div>');
 
         element.firstElementChild.click();
+        await wait();
         expect(element.innerHTML).toBe('<div>2</div><div>2</div>');
     });
 
@@ -768,7 +785,7 @@ describe('Unit Tests', () => {
         const fixture = getFixture([AppComponent, IntactChildrenComponent, SimpleComponent]);
     });
 
-    it('should get parentVNode that nested in Intact component in Intact template', () => {
+    it('should get parentVNode that nested in Intact component in Intact template', async () => {
         const Wrapper = createIntactComponent(`<select>{self.get('children')}</select>`);
         const SelectComponent = createIntactAngularComponent(
             `<Wrapper>{self.get('children')}</Wrapper>`,
@@ -808,6 +825,7 @@ describe('Unit Tests', () => {
         expect(component.option.vNode.parentVNode.parentVNode.tag).toBe(Wrapper);
         component.value = 2;
         fixture.detectChanges();
+        await wait();
         expect(component.option.vNode.parentVNode.parentVNode.tag).toBe(Wrapper);
     });
 
@@ -848,7 +866,7 @@ describe('Unit Tests', () => {
         // fixture.detectChanges();
     // });
 
-    it('should handle children vNode in Intact template', () => {
+    it('should handle children vNode in Intact template', async () => {
         const GroupComponent = createIntactAngularComponent(
             `<ul>
                 {self.get('children').map(vNode => {
@@ -882,14 +900,16 @@ describe('Unit Tests', () => {
 
         component.list = ['3', '4'];
         fixture.detectChanges();
+        await wait();
         expect(element.innerHTML).toBe('<ul><li class="k-item">3</li><li class="k-item">4</li></ul>');
 
         component.list[0] = '5';
         fixture.detectChanges();
+        await wait();
         expect(element.innerHTML).toBe('<ul><li class="k-item">5</li><li class="k-item">4</li></ul>');
     });
 
-    it('should call lifecycle methods of Angular component correctly', () => {
+    it('should call lifecycle methods of Angular component correctly', async () => {
         const ngOnInit = jasmine.createSpy();
         const ngOnDestroy = jasmine.createSpy();
         const ngAfterViewChecked = jasmine.createSpy();
@@ -968,8 +988,9 @@ describe('Unit Tests', () => {
         const component = fixture.componentInstance;
         component.a = 2;
         fixture.detectChanges();
+        await wait();
         expect(ngOnInit.calls.count()).toEqual(1);
-        expect(ngAfterViewChecked.calls.count()).toEqual(2);
+        expect(ngAfterViewChecked.calls.count()).toEqual(4);
         expect(ngOnDestroy.calls.count()).toEqual(0);
         expect(beforeCreate.calls.count()).toEqual(1);
         expect(mount.calls.count()).toEqual(1);
@@ -983,6 +1004,7 @@ describe('Unit Tests', () => {
         // destroy
         component.show = false;
         fixture.detectChanges();
+        await wait();
         expect(ngOnInit.calls.count()).toEqual(1);
         // expect(ngAfterViewChecked.calls.count()).toEqual(3);
         expect(ngOnDestroy.calls.count()).toEqual(1);
@@ -995,11 +1017,12 @@ describe('Unit Tests', () => {
         component.show = true;
         html = '<div><app-angular ng-reflect-a="3"><div>3</div></app-angular><div>3</div></div>';
         fixture.detectChanges();
+        await wait();
         component.show = false;
         fixture.detectChanges();
     });
 
-    it('should destroy component in Intact component\'s tempalte correctly', () => {
+    it('should destroy component in Intact component\'s tempalte correctly', async () => {
         const TestComponent = createIntactAngularComponent(
             `<div>{!self.get('hide') ? self.get('children') : undefined}</div>`,
             `k-test`
@@ -1048,18 +1071,21 @@ describe('Unit Tests', () => {
 
         (<any>component).hide = true;
         fixture.detectChanges();
+        await wait();
         expect(childCount).toBe(0);
         // the k-wrapper which nests in div will not be destroyed, and not be re-created too
         expect(wrapperCount).toBe(1);
 
         (<any>component).hide = false;
         fixture.detectChanges();
+        await wait();
         expect(childCount).toBe(1);
         expect(wrapperCount).toBe(3);
         
         // remove really
         (<any>component).remove = true;
         fixture.detectChanges();
+        await wait();
         expect(childCount).toBe(0);
         expect(wrapperCount).toBe(0);
     });
@@ -1240,7 +1266,7 @@ describe('Unit Tests', () => {
         expect(onClick.calls.count()).toEqual(1);
     });
 
-    it('should destroy Angular component', () => {
+    it('should destroy Angular component', async () => {
         const TestComponent = createIntactAngularComponent(
             `<div v-if={!self.get('hidden')}>{self.get('children')}</div>`,
             `k-test`
@@ -1277,10 +1303,12 @@ describe('Unit Tests', () => {
 
         component.hide();
         fixture.detectChanges();
+        await wait();
         expect(element.innerHTML).toBe('');
         
         component.show();
         fixture.detectChanges();
+        await wait();
         expect(element.innerHTML).toBe('<div><app-test><div>test</div></app-test></div>');
     });
 
@@ -1311,7 +1339,7 @@ describe('Unit Tests', () => {
         expect((<any>component).value).toBe(2);
     });
 
-    it('should treat component in block as root element', () => {
+    it('should treat component in block as root element', async () => {
         const TestComponent = createIntactAngularComponent(
             `<div><b:template args={[self.get('test')]} /></div>`,
             `k-test`,
@@ -1331,6 +1359,7 @@ describe('Unit Tests', () => {
                         <div (click)="onClick()">
                             <k-children>test {{ value }} {{ data }}</k-children>
                         </div>
+                        <k-children>test</k-children>
                     </ng-template>
                 </k-test>
             `
@@ -1348,12 +1377,73 @@ describe('Unit Tests', () => {
         const component = fixture.componentInstance;
 
         element.firstChild.firstChild.firstChild.click();
-        expect(element.innerHTML).toBe('<div><intact-content><div><div>test 2 a</div></div></intact-content></div>');
+        await wait();
+        expect(element.innerHTML).toBe('<div><intact-content><div><div>test 2 a</div></div><div>test</div></intact-content></div>');
 
         component.test.set('test', 'b');
-        expect(element.innerHTML).toBe('<div><intact-content><div><div>test 2 b</div></div></intact-content></div>');
+        await wait();
+        expect(element.innerHTML).toBe('<div><intact-content><div><div>test 2 b</div></div><div>test</div></intact-content></div>');
 
         element.firstChild.firstChild.firstChild.click();
-        expect(element.innerHTML).toBe('<div><intact-content><div><div>test 3 b</div></div></intact-content></div>');
+        await wait();
+        expect(element.innerHTML).toBe('<div><intact-content><div><div>test 3 b</div></div><div>test</div></intact-content></div>');
+    });
+
+    it('should update status in Intact component even though it has not been changed in Angular root component', async () => {
+        const TestComponent = createIntactAngularComponent(
+            `<div>
+                <template v-for={self.get('value')}>
+                    <b:list args={[value]} />
+                </template>
+            </div>`,
+            `k-test`,
+            {
+                _init() {
+                    this.id = 0;
+                    const fixValue = (v) => {
+                        if (!Array.isArray(v)) {
+                            this.set('value', [], {silent: true});
+                        }
+                    };
+                    this.on('$receive:value', (c, v) => fixValue(v));
+                    this.on('$change:test', (c, v) => {
+                        this.update();
+                    });
+                },
+
+                push() {
+                    const value = this.get('value').slice(0);
+                    value.push(++this.id);
+                    this.set({
+                        'value': value,
+                        'test': value, // make it update before changing value
+                    });
+                }
+            },
+            ['list']
+        );
+
+        @Component({
+            selector: 'app-root',
+            template: `
+                <k-test [(value)]="value" #test>
+                    <ng-template #list let-data="args[0]">
+                        <span>{{ data }}</span>
+                    </ng-template>
+                </k-test>
+            `
+        })
+        class AppComponent {
+            @ViewChild('test', {static: true}) test;
+            private value;
+        }
+
+        const fixture = getFixture<AppComponent>([AppComponent, TestComponent]);
+        const element = fixture.nativeElement;
+        const component = fixture.componentInstance;
+
+        component.test.push();
+        await wait();
+        expect(element.innerHTML).toBe('<div><intact-content><span>1</span></intact-content></div>');
     });
 });

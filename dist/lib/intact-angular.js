@@ -6,7 +6,7 @@ import { decorate, BLOCK_NAME_PREFIX } from './decorate';
 import { getParentIntactInstance } from './helpers';
 var h = Intact.Vdt.miss.h;
 var _a = Intact.Vdt.utils, intactClassName = _a.className, isEventProp = _a.isEventProp;
-var _b = Intact.utils, get = _b.get, set = _b.set;
+var _b = Intact.utils, get = _b.get, set = _b.set, nextTick = _b.nextTick;
 var IntactAngular = /** @class */ (function (_super) {
     tslib_1.__extends(IntactAngular, _super);
     function IntactAngular(elRef, viewContainerRef, injector, ngZone, 
@@ -24,7 +24,7 @@ var IntactAngular = /** @class */ (function (_super) {
         _this.__firstCheck = true;
         _this._isAngular = false;
         _this._hasDestroyedByAngular = false;
-        _this.__updating = false;
+        // private __updating = false;
         _this._willUpdate = false;
         if (elRef instanceof ElementRef) {
             _this._isAngular = true;
@@ -67,17 +67,13 @@ var IntactAngular = /** @class */ (function (_super) {
         }
         return _super.prototype.init.call(this, lastVNode, nextVNode);
     };
-    IntactAngular.prototype.update = function () {
-        var args = [];
-        for (var _i = 0; _i < arguments.length; _i++) {
-            args[_i] = arguments[_i];
-        }
-        var updating = this.__updating;
-        this.__updating = true;
-        var ret = _super.prototype.update.apply(this, tslib_1.__spread(args));
-        this.__updating = updating;
-        return ret;
-    };
+    // update(...args) {
+    // const updating = this.__updating;
+    // this.__updating = true;
+    // const ret = super.update(...args);
+    // this.__updating = updating;
+    // return ret;
+    // }
     IntactAngular.prototype.ngDoCheck = function () {
         // console.log('ngDoCheck', (<any>this).uniqueId, this);
         this.__parent__ = this._findParentIntactComponent();
@@ -95,20 +91,20 @@ var IntactAngular = /** @class */ (function (_super) {
         var props = this._normalizeProps();
         this._constructor(props);
         this.__appendQueue.push(function () {
+            if (!_this.cancelAppendedQueue) {
+                _this.__updateParentVNode();
+                _this.ngZone.runOutsideAngular(function () {
+                    _this.__initMountedQueue();
+                    var dom = _this.init(null, _this.vNode);
+                    _this.vNode.dom = dom;
+                    dom._intactNode = placeholder._intactNode;
+                    placeholder._realElement = dom;
+                    placeholder.parentNode.replaceChild(dom, placeholder);
+                    _this.mountedQueue.push(function () { return _this.mount(); });
+                    _this.__triggerMountedQueue();
+                });
+            }
             _this._willUpdate = false;
-            if (_this.cancelAppendedQueue)
-                return;
-            _this.__updateParentVNode();
-            _this.ngZone.runOutsideAngular(function () {
-                _this.__initMountedQueue();
-                var dom = _this.init(null, _this.vNode);
-                _this.vNode.dom = dom;
-                dom._intactNode = placeholder._intactNode;
-                placeholder._realElement = dom;
-                placeholder.parentNode.replaceChild(dom, placeholder);
-                _this.mountedQueue.push(function () { return _this.mount(); });
-                _this.__triggerMountedQueue();
-            });
         });
         this._triggerAppendQueue();
     };
@@ -128,15 +124,18 @@ var IntactAngular = /** @class */ (function (_super) {
         this._initVNode();
         this._normalizeProps();
         this.__appendQueue.push(function () {
+            if (!_this.cancelAppendedQueue) {
+                _this.ngZone.runOutsideAngular(function () {
+                    // we have to do this next tick, otherwise it may throw
+                    // ExpressionChangedAfterItHasBeenCheckedError 
+                    nextTick(function () {
+                        _this.__initMountedQueue();
+                        _this.update(lastVNode, _this.vNode);
+                        _this.__triggerMountedQueue();
+                    });
+                });
+            }
             _this._willUpdate = false;
-            if (_this.cancelAppendedQueue)
-                return;
-            _this.__updateParentVNode();
-            _this.ngZone.runOutsideAngular(function () {
-                _this.__initMountedQueue();
-                _this.update(lastVNode, _this.vNode);
-                _this.__triggerMountedQueue();
-            });
         });
         this._triggerAppendQueue();
     };
@@ -323,18 +322,18 @@ var IntactAngular = /** @class */ (function (_super) {
     };
     IntactAngular.prototype._triggerAppendQueue = function () {
         var parent = this.__parent__;
-        if (!parent) {
-            this._willUpdate = false;
-        }
-        else {
-            this._willUpdate = parent._willUpdate;
-        }
         if (!parent || !parent._willUpdate) {
             var cb = void 0;
             while (cb = this.__appendQueue.pop()) {
                 cb();
             }
             this.__appendQueue.done = true;
+        }
+        if (!parent) {
+            this._willUpdate = false;
+        }
+        else {
+            this._willUpdate = parent._willUpdate;
         }
     };
     IntactAngular.prototype.__updateParentVNode = function () {

@@ -135,6 +135,11 @@ var DefaultDomRenderer2 = /** @class */ (function () {
             }
             // for save original className
             newChild._classNames = new Set();
+            // maybe it has add className by calling setAttribute method
+            var className = newChild.className;
+            if (className) {
+                newChild._classNames.add(className);
+            }
         }
         else {
             parent.appendChild(newChild);
@@ -237,6 +242,9 @@ var DefaultDomRenderer2 = /** @class */ (function () {
             el._intactNode.removeProperty(name);
         }
         else {
+            if (name === 'class' && el._classNames) {
+                el._classNames.clear();
+            }
             el.removeAttribute(name);
         }
     };
@@ -320,7 +328,7 @@ var DefaultDomRenderer2 = /** @class */ (function () {
                     // don't change the property, if this component has not been rendered
                     // otherwise it will throw ExpressionChangedAfterItHasBeenCheckedError
                     this.ngZone.run(function () {
-                        if (!_this.rendered || _this.__updating) {
+                        if (!_this.rendered /* || this.__updating */) {
                             nextTick(function () { return _cb_1(v); });
                         }
                         else {
@@ -345,7 +353,7 @@ var DefaultDomRenderer2 = /** @class */ (function () {
                     if (this) {
                         // if (this.inited) {
                         this.ngZone.run(function () {
-                            if (!_this.inited || _this.__updating) {
+                            if (!_this.inited /* || this.__updating */) {
                                 nextTick(function () { return _cb_2(args); });
                             }
                             else {

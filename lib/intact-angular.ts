@@ -11,7 +11,7 @@ import {getParentIntactInstance} from './helpers';
 
 const {h} = Intact.Vdt.miss;
 const {className: intactClassName, isEventProp} = Intact.Vdt.utils;
-const {get, set} = Intact.utils;
+const {get, set, nextTick} = Intact.utils;
 
 @Component({})
 export class IntactAngular extends Intact {
@@ -35,7 +35,7 @@ export class IntactAngular extends Intact {
     private __firstCheck = true;
     private _isAngular = false;
     private _hasDestroyedByAngular = false;
-    private __updating = false;
+    // private __updating = false;
     private _willUpdate = false;
 
     constructor(
@@ -89,13 +89,13 @@ export class IntactAngular extends Intact {
         return super.init(lastVNode, nextVNode);
     }
 
-    update(...args) {
-        const updating = this.__updating;
-        this.__updating = true;
-        const ret = super.update(...args);
-        this.__updating = updating;
-        return ret;
-    }
+    // update(...args) {
+        // const updating = this.__updating;
+        // this.__updating = true;
+        // const ret = super.update(...args);
+        // this.__updating = updating;
+        // return ret;
+    // }
 
     ngDoCheck() {
         // console.log('ngDoCheck', (<any>this).uniqueId, this);
@@ -108,7 +108,6 @@ export class IntactAngular extends Intact {
         // console.log('ngAfterViewInit', (<any>this).uniqueId, this);
         const parent = this.__parent__;
 
-
         const placeholder = this._placeholder = this.elRef.nativeElement;
         this._normalizeBlocks();
         this._normalizeContext();
@@ -117,23 +116,23 @@ export class IntactAngular extends Intact {
         this._constructor(props);
 
         this.__appendQueue.push(() => {
+            if (!this.cancelAppendedQueue) {
+                this.__updateParentVNode();
+
+                this.ngZone.runOutsideAngular(() => {
+                    this.__initMountedQueue();
+
+                    const dom = (<any>this).init(null, this.vNode);
+                    this.vNode.dom = dom;
+                    dom._intactNode = placeholder._intactNode;
+                    placeholder._realElement = dom;
+                    placeholder.parentNode.replaceChild(dom, placeholder);
+
+                    this.mountedQueue.push(() => (<any>this).mount());
+                    this.__triggerMountedQueue();
+                });
+            }
             this._willUpdate = false;
-            if (this.cancelAppendedQueue) return;
-
-            this.__updateParentVNode();
-
-            this.ngZone.runOutsideAngular(() => {
-                this.__initMountedQueue();
-
-                const dom = (<any>this).init(null, this.vNode);
-                this.vNode.dom = dom;
-                dom._intactNode = placeholder._intactNode;
-                placeholder._realElement = dom;
-                placeholder.parentNode.replaceChild(dom, placeholder);
-
-                this.mountedQueue.push(() => (<any>this).mount());
-                this.__triggerMountedQueue();
-            });
         });
 
         this._triggerAppendQueue();
@@ -155,16 +154,18 @@ export class IntactAngular extends Intact {
         this._normalizeProps();
 
         this.__appendQueue.push(() => {
+            if (!this.cancelAppendedQueue) {
+                this.ngZone.runOutsideAngular(() => {
+                    // we have to do this next tick, otherwise it may throw
+                    // ExpressionChangedAfterItHasBeenCheckedError 
+                    nextTick(() => {
+                        this.__initMountedQueue();
+                        (<any>this).update(lastVNode, this.vNode);
+                        this.__triggerMountedQueue();
+                    });
+                });
+            }
             this._willUpdate = false;
-            if (this.cancelAppendedQueue) return;
-
-            this.__updateParentVNode();
-
-            this.ngZone.runOutsideAngular(() => {
-                this.__initMountedQueue();
-                (<any>this).update(lastVNode, this.vNode);
-                this.__triggerMountedQueue();
-            });
         });
 
         this._triggerAppendQueue();
@@ -349,17 +350,17 @@ export class IntactAngular extends Intact {
 
     _triggerAppendQueue() {
         const parent = this.__parent__;
-        if (!parent) {
-            this._willUpdate = false;
-        } else {
-            this._willUpdate = parent._willUpdate;
-        }
         if (!parent || !parent._willUpdate) {
             let cb;
             while (cb = this.__appendQueue.pop()) {
                 cb();
             }
             this.__appendQueue.done = true;
+        }
+        if (!parent) {
+            this._willUpdate = false;
+        } else {
+            this._willUpdate = parent._willUpdate;
         }
     }
 
