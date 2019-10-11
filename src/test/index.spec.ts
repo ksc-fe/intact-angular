@@ -1133,6 +1133,53 @@ describe('Unit Tests', () => {
         expect(onClick.calls.count()).toEqual(2);
     });
 
+    it('should change className when it is a static Angular element', () => {
+        const {clone} = (<any>Intact).Vdt.miss;
+        const TestComponent = createIntactAngularComponent(
+            `<div>{self.get('children')}</div>`,
+            `k-test`,
+            {
+                _init() {
+                    this.on('$receive:children', this._changeProps);
+                },
+
+                _changeProps() {
+                    const children = clone(this.get('children.0'));
+                    const props = {...children.props};
+                    props.className = children.className + ' test';
+                    children.props = props;
+                    this.set('children.0', children, {silent: true});
+                },
+
+                _removeClass() {
+                    const children = clone(this.get('children.0'));
+                    const props = {...children.props};
+                    props.className = '';
+                    children.props = props;
+                    this.set('children.0', children, {silent: true});
+                },
+            }
+        );
+        @Component({
+            selector: 'app-root',
+            template: `<k-test #test><div class="a">click</div></k-test>`
+        })
+        class AppComponent {
+            @ViewChild('test', {static: true, read: TestComponent}) test;
+        }
+
+        const fixture = getFixture<AppComponent>([AppComponent, TestComponent]);
+        const element = fixture.nativeElement;
+
+        const div = element.firstChild.firstChild;
+        expect(div.className).toBe('a test');
+
+        const component = fixture.componentInstance;
+        component.test._removeClass();
+        component.test.update();
+        expect(div.className).toBe('');
+    });
+
     it('should bind event when Intact has changed its props and it is an Intact component', () => {
         const onClick = jasmine.createSpy();
         // const onClick = function() { console.log('click') }

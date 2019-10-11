@@ -152,6 +152,11 @@ class DefaultDomRenderer2 implements Renderer2 {
             }
             // for save original className
             newChild._classNames = new Set();
+            // maybe it has add className by calling setAttribute method
+            const className = newChild.className;
+            if (className) {
+                newChild._classNames.add(className);
+            }
         } else {
             parent.appendChild(newChild); 
         }
@@ -249,10 +254,12 @@ class DefaultDomRenderer2 implements Renderer2 {
                 // which is wrong.
                 el.removeAttribute(`${namespace}:${name}`);
             }
-            
         } else if (el._intactNode) {
             el._intactNode.removeProperty(name);
         } else {
+            if (name === 'class' && el._classNames) {
+                el._classNames.clear();
+            }
             el.removeAttribute(name);
         }
     }
