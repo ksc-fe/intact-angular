@@ -33,6 +33,8 @@ var Wrapper = /** @class */ (function () {
     // }
     // }
     Wrapper.prototype._handleProps = function (vNode) {
+        // for Intact reusing the dom
+        this.vdt = { vNode: vNode };
         vNode = clone(vNode);
         var props = tslib_1.__assign({}, vNode.props);
         var dom = props.dom;
@@ -72,15 +74,17 @@ var BlockWrapper = /** @class */ (function () {
     };
     BlockWrapper.prototype._render = function (vNode) {
         var _this = this;
+        // for Intact reusing the dom
+        this.vdt = { vNode: vNode };
         var placeholder = this.placeholder = document.createElement('intact-content');
         var _a = this.vNode.props, templateRef = _a.templateRef, context = _a.context, ngZone = _a.ngZone;
         ngZone.run(function () {
             var viewRef = _this.viewRef = templateRef.createEmbeddedView({ args: context });
-            // for call lifecycle methods
-            _this.viewRef.detectChanges();
             viewRef.rootNodes.forEach(function (dom) {
                 placeholder.appendChild(dom);
             });
+            // for call lifecycle methods
+            _this.viewRef.detectChanges();
         });
     };
     BlockWrapper.$id = 'AngularBlockWrapper';

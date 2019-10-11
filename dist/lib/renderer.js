@@ -338,10 +338,11 @@ var DefaultDomRenderer2 = /** @class */ (function () {
                 };
             }
             else {
-                if (event[0] === '$') {
-                    // change $change-value to $change:value
-                    event = event.replace(/\-/, ':');
-                }
+                // if (event[0] === '$') {
+                // change $change-value to $change:value
+                // exist name such as `rightclick:node`
+                event = event.replace(/\-/, ':');
+                // }
                 var _cb_2 = callback;
                 var self_1 = this;
                 callback = function () {
@@ -351,8 +352,8 @@ var DefaultDomRenderer2 = /** @class */ (function () {
                         args[_i] = arguments[_i];
                     }
                     if (this) {
-                        // if (this.inited) {
-                        this.ngZone.run(function () {
+                        var ngZone = this.ngZone || this.get('_context').ngZone;
+                        ngZone.run(function () {
                             if (!_this.inited /* || this.__updating */) {
                                 nextTick(function () { return _cb_2(args); });
                             }
@@ -360,7 +361,6 @@ var DefaultDomRenderer2 = /** @class */ (function () {
                                 _cb_2(args);
                             }
                         });
-                        // }
                     }
                     else {
                         self_1.eventManager._zone.run(function () {

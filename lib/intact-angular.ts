@@ -158,6 +158,10 @@ export class IntactAngular extends Intact {
                 this.ngZone.runOutsideAngular(() => {
                     // we have to do this next tick, otherwise it may throw
                     // ExpressionChangedAfterItHasBeenCheckedError 
+                    //
+                    // we must set the dom firstly to make it can been updated,
+                    // otherwise ngAfterViewChecked method will return directly
+                    this.vNode.dom = lastVNode.dom;
                     nextTick(() => {
                         this.__initMountedQueue();
                         (<any>this).update(lastVNode, this.vNode);
@@ -197,33 +201,42 @@ export class IntactAngular extends Intact {
         const intactNode: IntactNode = placeholder._intactNode;
         intactNode.instance = this;
 
-        const children = intactNode.children.map(dom => {
+        let children;
+        for (let i = 0; i < intactNode.children.length; i++) {
+            const dom = intactNode.children[i];
             const node = (<any>dom)._intactNode;
+            let vNode;
             if (node) {
                 node.instance.cancelAppendedQueue = true;
-                const vNode = h(node.instance);
+                vNode = h(node.instance);
                 // because we may change props in Intact component
                 // we set this flag to update props in `init` method
                 node.instance._shouldUpdateProps = true;
                 vNode.props = node.instance.vNode.props;
-                return vNode;
             } else if (dom.nodeType === 3) {
                 // text node use the nodeValue as vNode
                 // KPC components library use this for detecting text vNode
-                return dom.nodeValue;
+                vNode = dom.nodeValue;
+            } else if (dom.nodeType === 8) {
+                // ignore comments
+                continue;
+            } else {
+                // angular can insert dom, so we must keep the key consistent
+                // we use the dom as key
+                // 
+                // we must get the className of the dom
+                // because it is useful for Intact component to modify it
+                // <intact-content> has not _classNames
+                let className = (<any>dom)._classNames;
+                if (className) {
+                    className = Array.from(className).join(' ') || undefined;
+                }
+                vNode = h(Wrapper, {dom}, null, className, dom);
             }
-            // angular can insert dom, so we must keep the key consistent
-            // we use the dom as key
-            // 
-            // we must get the className of the dom
-            // because it is useful for Intact component to modify it
-            // <intact-content> has not _classNames
-            let className = (<any>dom)._classNames;
-            if (className) {
-                className = Array.from(className).join(' ') || undefined;
-            }
-            return h(Wrapper, {dom}, null, className, dom);
-        });
+
+            if (!children) children = [];
+            children.push(vNode);
+        }
 
         // normalize className
         if (intactNode.className) {
@@ -276,8 +289,9 @@ export class IntactAngular extends Intact {
                     ngZone.run(() => {
                         set(context, key, value);
                     });
-                }
-            }
+                },
+            },
+            ngZone,
         }
     }
 

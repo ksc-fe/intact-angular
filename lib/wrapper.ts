@@ -4,6 +4,8 @@ const {patch, clone, Types} = Intact.Vdt.miss;
 const emptyObject = Object.create(null);
 
 export class Wrapper {
+    private vdt;
+
     init(lastVNode, nextVNode) {
         const dom = nextVNode.props.dom;
 
@@ -38,6 +40,8 @@ export class Wrapper {
     // }
 
     _handleProps(vNode) {
+        // for Intact reusing the dom
+        this.vdt = {vNode};
         vNode = clone(vNode);
         const props = {...vNode.props};
         const dom = props.dom;
@@ -63,6 +67,7 @@ export class BlockWrapper {
     private placeholder;
     private vNode;
     private viewRef;
+    private vdt;
 
     static $id = 'AngularBlockWrapper';
 
@@ -83,15 +88,17 @@ export class BlockWrapper {
     }
 
     _render(vNode) {
+        // for Intact reusing the dom
+        this.vdt = {vNode};
         const placeholder = this.placeholder = document.createElement('intact-content');
         const {templateRef, context, ngZone} = this.vNode.props;
         ngZone.run(() => {
             const viewRef = this.viewRef = templateRef.createEmbeddedView({args: context});
-            // for call lifecycle methods
-            this.viewRef.detectChanges();
             viewRef.rootNodes.forEach(dom => {
                 placeholder.appendChild(dom);
             });
+            // for call lifecycle methods
+            this.viewRef.detectChanges();
         });
     }
 }

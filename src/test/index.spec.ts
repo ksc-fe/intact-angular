@@ -516,19 +516,42 @@ describe('Unit Tests', () => {
         expect(element.innerHTML).toBe("<div><div><intact-content><div>eee</div></intact-content></div></div>");
     });
 
-    it('should render Intact functional component', () => {
+    it('should render Intact functional component', async () => {
         const {h} = (<any>Intact).Vdt.miss;
+        const TestComponent = createIntactComponent(
+            `<div ev-click={self.onClick}>{self.get('children')}</div>`,
+            {
+                onClick() {
+                    this.trigger('click');
+                }
+            }
+        );
         const FunctionalComponent = functionalWrapper(function(props) {
             return h('k-wrapper', null, [
-                h(IntactChildrenComponent, props),
+                h(TestComponent, {...props}),
                 h(IntactChildrenComponent, null, 'two')
             ]);
         }, 'k-functional');
-        const AppComponent = createAppComponent(`<k-functional>test</k-functional>`);
+        @Component({
+            selector: 'app-root',
+            template: `
+                <k-functional (click)="onClick()">test {{ value }}</k-functional>
+            `
+        })
+        class AppComponent {
+            private value = 0;
+            onClick() {
+                this.value++;
+            }
+        }
 
         const fixture = getFixture([AppComponent, FunctionalComponent]);
         const element = fixture.nativeElement;
-        expect(element.innerHTML).toBe('<k-wrapper><div>test</div><div>two</div></k-wrapper>');
+        expect(element.innerHTML).toBe('<k-wrapper><div>test 0</div><div>two</div></k-wrapper>');
+
+        element.firstChild.firstChild.click();
+        await wait()
+        expect(element.innerHTML).toBe('<k-wrapper><div>test 1</div><div>two</div></k-wrapper>');
     });
 
     it('should render blocks in Intact functional component', () => {
@@ -994,7 +1017,7 @@ describe('Unit Tests', () => {
         expect(ngOnDestroy.calls.count()).toEqual(0);
         expect(beforeCreate.calls.count()).toEqual(1);
         expect(mount.calls.count()).toEqual(1);
-        expect(update.calls.count()).toEqual(1);
+        expect(update.calls.count()).toEqual(3);
         expect(destroy.calls.count()).toEqual(0);
         // ItemComponent
         expect(methods._beforeCreate.calls.count()).toEqual(1);
@@ -1428,6 +1451,7 @@ describe('Unit Tests', () => {
             template: `
                 <k-test [(value)]="value" #test>
                     <ng-template #list let-data="args[0]">
+                        <k-children>{{ data }}</k-children>
                         <span>{{ data }}</span>
                     </ng-template>
                 </k-test>
@@ -1438,12 +1462,12 @@ describe('Unit Tests', () => {
             private value;
         }
 
-        const fixture = getFixture<AppComponent>([AppComponent, TestComponent]);
+        const fixture = getFixture<AppComponent>([AppComponent, TestComponent, IntactChildrenComponent]);
         const element = fixture.nativeElement;
         const component = fixture.componentInstance;
 
         component.test.push();
         await wait();
-        expect(element.innerHTML).toBe('<div><intact-content><span>1</span></intact-content></div>');
+        expect(element.innerHTML).toBe('<div><intact-content><div>1</div><span>1</span></intact-content></div>');
     });
 });

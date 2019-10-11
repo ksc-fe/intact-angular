@@ -352,23 +352,23 @@ class DefaultDomRenderer2 implements Renderer2 {
                     });
                 } as (event: any) => boolean;
             } else {
-                if (event[0] === '$') {
+                // if (event[0] === '$') {
                     // change $change-value to $change:value
+                    // exist name such as `rightclick:node`
                     event = event.replace(/\-/, ':');
-                }
+                // }
                 const _cb = callback;
                 const self = this;
                 callback = function(...args) {
                     if (this) {
-                        // if (this.inited) {
-                            this.ngZone.run(() => {
-                                if (!this.inited /* || this.__updating */) {
-                                    nextTick(() => _cb(args));
-                                } else {
-                                    _cb(args);
-                                }
-                            });
-                        // }
+                        const ngZone = this.ngZone || this.get('_context').ngZone;
+                        ngZone.run(() => {
+                            if (!this.inited /* || this.__updating */) {
+                                nextTick(() => _cb(args));
+                            } else {
+                                _cb(args);
+                            }
+                        });
                     } else {
                         (<any>self.eventManager)._zone.run(() => {
                             _cb(args);
