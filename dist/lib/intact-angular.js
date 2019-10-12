@@ -1,6 +1,6 @@
 import * as tslib_1 from "tslib";
 import Intact from 'intact/dist/index';
-import { Component, ElementRef, ViewContainerRef, ChangeDetectorRef, TemplateRef, Injector, NgZone, } from '@angular/core';
+import { Component, ElementRef, ViewContainerRef, ChangeDetectorRef, TemplateRef, Injector, NgZone } from '@angular/core';
 import { Wrapper, BlockWrapper } from './wrapper';
 import { decorate, BLOCK_NAME_PREFIX } from './decorate';
 import { getParentIntactInstance } from './helpers';
