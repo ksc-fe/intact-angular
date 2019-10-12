@@ -2,7 +2,7 @@ import Intact from 'intact/dist/index';
 import {
     Component, ElementRef, ViewContainerRef, 
     ChangeDetectorRef, ViewChild, TemplateRef,
-    Injector, NgZone, ApplicationRef,
+    Injector, NgZone, ApplicationRef
 } from '@angular/core';
 import {Wrapper, BlockWrapper} from './wrapper';
 import {IntactNode} from './intact-node';
