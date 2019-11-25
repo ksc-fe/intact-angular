@@ -9,9 +9,14 @@ import {IntactNode} from './intact-node';
 import {decorate, BLOCK_NAME_PREFIX} from './decorate';
 import {getParentIntactInstance} from './helpers';
 
-const {h} = Intact.Vdt.miss;
+const {h, config} = Intact.Vdt.miss;
 const {className: intactClassName, isEventProp} = Intact.Vdt.utils;
 const {get, set, nextTick} = Intact.utils;
+
+// disable delegate events
+if (config) {
+    config.disableDelegate = true;
+}
 
 @Component({})
 export class IntactAngular extends Intact {

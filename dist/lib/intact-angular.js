@@ -1,12 +1,16 @@
 import * as tslib_1 from "tslib";
 import Intact from 'intact/dist/index';
-import { Component, ElementRef, ViewContainerRef, ChangeDetectorRef, TemplateRef, Injector, NgZone, } from '@angular/core';
+import { Component, ElementRef, ViewContainerRef, ChangeDetectorRef, TemplateRef, Injector, NgZone } from '@angular/core';
 import { Wrapper, BlockWrapper } from './wrapper';
 import { decorate, BLOCK_NAME_PREFIX } from './decorate';
 import { getParentIntactInstance } from './helpers';
-var h = Intact.Vdt.miss.h;
-var _a = Intact.Vdt.utils, intactClassName = _a.className, isEventProp = _a.isEventProp;
-var _b = Intact.utils, get = _b.get, set = _b.set, nextTick = _b.nextTick;
+var _a = Intact.Vdt.miss, h = _a.h, config = _a.config;
+var _b = Intact.Vdt.utils, intactClassName = _b.className, isEventProp = _b.isEventProp;
+var _c = Intact.utils, get = _c.get, set = _c.set, nextTick = _c.nextTick;
+// disable delegate events
+if (config) {
+    config.disableDelegate = true;
+}
 var IntactAngular = /** @class */ (function (_super) {
     tslib_1.__extends(IntactAngular, _super);
     function IntactAngular(elRef, viewContainerRef, injector, ngZone, 
