@@ -32,7 +32,7 @@ export declare class IntactAngular extends Intact {
     ngDoCheck(): void;
     ngAfterViewInit(): void;
     ngAfterViewChecked(): boolean;
-    destroy(lastVNode: any, nextVNode: any, parentDom: any): void;
+    destroy(lastVNode: any, nextVNode: any, parentDom: any, fromSelf: any): void;
     ngOnDestroy(): void;
     _normalizeProps(): {
         key: any;

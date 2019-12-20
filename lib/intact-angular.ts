@@ -180,9 +180,9 @@ export class IntactAngular extends Intact {
         this._triggerAppendQueue();
     }
 
-    destroy(lastVNode, nextVNode, parentDom) {
-        if (this._isAngular) {
-            // maybe the parent that is Angular element has been destroyed by Angular
+    destroy(lastVNode, nextVNode, parentDom, fromSelf) {
+        if (!fromSelf && this._isAngular) {
+            // maybe the parent which is an Angular element has been destroyed by Angular
             if (this._hasDestroyedByAngular) return;
 
             (<any>this).vdt.destroy();
@@ -198,7 +198,7 @@ export class IntactAngular extends Intact {
 
     ngOnDestroy() {
         this._hasDestroyedByAngular = true;
-        super.destroy();
+        this.destroy(null, null, null, true);
     }
 
     _normalizeProps() {

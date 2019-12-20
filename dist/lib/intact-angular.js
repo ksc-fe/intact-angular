@@ -147,9 +147,9 @@ var IntactAngular = /** @class */ (function (_super) {
         });
         this._triggerAppendQueue();
     };
-    IntactAngular.prototype.destroy = function (lastVNode, nextVNode, parentDom) {
-        if (this._isAngular) {
-            // maybe the parent that is Angular element has been destroyed by Angular
+    IntactAngular.prototype.destroy = function (lastVNode, nextVNode, parentDom, fromSelf) {
+        if (!fromSelf && this._isAngular) {
+            // maybe the parent which is an Angular element has been destroyed by Angular
             if (this._hasDestroyedByAngular)
                 return;
             this.vdt.destroy();
@@ -165,7 +165,7 @@ var IntactAngular = /** @class */ (function (_super) {
     };
     IntactAngular.prototype.ngOnDestroy = function () {
         this._hasDestroyedByAngular = true;
-        _super.prototype.destroy.call(this);
+        this.destroy(null, null, null, true);
     };
     IntactAngular.prototype._normalizeProps = function () {
         var placeholder = this._placeholder;
